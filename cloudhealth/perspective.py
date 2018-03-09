@@ -27,6 +27,12 @@ class Perspectives:
         perspective.create()
         return perspective
 
+    def update(self, perspective_id, schema):
+        """Updates perspective with specified id, using specified schema"""
+        perspective = self.get(perspective_id)
+        perspective.update(schema)
+        return perspective
+
 
 class Perspective:
     # MVP requires the full schema for all operations
@@ -108,6 +114,18 @@ class Perspective:
     def schema(self, schema):
         self._schema = schema
 
+    def update(self, schema):
+        """Posts Schema to CloudHealth to update an existing perspective"""
+        if self.id:
+            schema_data = {'schema': schema}
+            response = self._http_client.post(self._uri, schema_data)
+            self.get_schema()
+        else:
+            raise RuntimeError(
+                "Perspective Id must be set to update a perspective".format(
+                    self.id
+                )
+            )
 
 
 
