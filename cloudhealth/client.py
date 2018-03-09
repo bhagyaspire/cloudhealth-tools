@@ -1,6 +1,7 @@
+import json
 import logging
 
-from cloudhealth.perspective import Perspectives, Perspective
+from cloudhealth.perspective import Perspectives
 
 import requests
 
@@ -21,6 +22,28 @@ class HTTPClient:
         response = requests.get(url,
                                 params=self._params,
                                 headers=self._headers)
+        if response.status_code != 200:
+            raise RuntimeError(
+                'Request to {} failed! (HTTP Error Code: {})'.format(
+                    url, response.status_code))
+        return response.json()
+
+    def post(self, uri, data):
+        url = self._endpoint + uri
+        # Would be ideal to have better handling in the future, but just
+        # need to support dicts for now
+        if type(data) is dict:
+            post_data = json.dumps(data)
+        elif type(data) is str:
+            post_data = data
+        else:
+            raise TypeError(
+                "data must either be dict or string (i.e. JSON)"
+            )
+        response = requests.post(url,
+                                 params=self._params,
+                                 headers=self._headers,
+                                 data=post_data)
         if response.status_code != 200:
             raise RuntimeError(
                 'Request to {} failed! (HTTP Error Code: {})'.format(
