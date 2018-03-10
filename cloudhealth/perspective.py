@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class Perspectives:
     def __init__(self, http_client):
         self._http_client = http_client

@@ -5,7 +5,7 @@ from cloudhealth.perspective import Perspectives
 
 import requests
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 DEFAULT_CLOUDHEALTH_API_URL = 'https://chapi.cloudhealthtech.com/'
 
@@ -19,13 +19,15 @@ class HTTPClient:
 
     def get(self, uri):
         url = self._endpoint + uri
+        logger.debug("GET {} with {} headers".format(url, self._headers))
         response = requests.get(url,
                                 params=self._params,
                                 headers=self._headers)
         if response.status_code != 200:
             raise RuntimeError(
-                'Request to {} failed! (HTTP Error Code: {})'.format(
-                    url, response.status_code))
+                ('Request to {} failed! HTTP Error Code: {} '
+                 'Response: {}').format(
+                    url, response.status_code, response.json()))
         return response.json()
 
     def post(self, uri, data):
@@ -40,14 +42,17 @@ class HTTPClient:
             raise TypeError(
                 "data must either be dict or string (i.e. JSON)"
             )
+        logger.debug("POST {} with {} headers".format(url, self._headers))
+        logger.debug("POST Data: {}".format(post_data))
         response = requests.post(url,
                                  params=self._params,
                                  headers=self._headers,
                                  data=post_data)
         if response.status_code != 200:
             raise RuntimeError(
-                'Request to {} failed! (HTTP Error Code: {})'.format(
-                    url, response.status_code))
+                ('Request to {} failed! HTTP Error Code: {} '
+                 'Response: {}').format(
+                    url, response.status_code, response.json()))
         return response.json()
 
     @property
