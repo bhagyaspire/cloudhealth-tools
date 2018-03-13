@@ -123,7 +123,7 @@ class Perspective:
         """Posts Schema to CloudHealth to update an existing perspective"""
         if self.id:
             schema_data = {'schema': schema}
-            response = self._http_client.post(self._uri, schema_data)
+            response = self._http_client.put(self._uri, schema_data)
             self.get_schema()
         else:
             raise RuntimeError(

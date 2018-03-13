@@ -23,6 +23,7 @@ class HTTPClient:
         response = requests.get(url,
                                 params=self._params,
                                 headers=self._headers)
+        logger.debug(response)
         if response.status_code != 200:
             raise RuntimeError(
                 ('Request to {} failed! HTTP Error Code: {} '
@@ -48,6 +49,33 @@ class HTTPClient:
                                  params=self._params,
                                  headers=self._headers,
                                  data=post_data)
+        logger.debug(response)
+        if response.status_code != 200:
+            raise RuntimeError(
+                ('Request to {} failed! HTTP Error Code: {} '
+                 'Response: {}').format(
+                    url, response.status_code, response.json()))
+        return response.json()
+
+    def put(self, uri, data):
+        url = self._endpoint + uri
+        # Would be ideal to have better handling in the future, but just
+        # need to support dicts for now
+        if type(data) is dict:
+            post_data = json.dumps(data)
+        elif type(data) is str:
+            post_data = data
+        else:
+            raise TypeError(
+                "data must either be dict or string (i.e. JSON)"
+            )
+        logger.debug("PUT {} with {} headers".format(url, self._headers))
+        logger.debug("PUT Data: {}".format(post_data))
+        response = requests.put(url,
+                                params=self._params,
+                                headers=self._headers,
+                                data=post_data)
+        logger.debug(response)
         if response.status_code != 200:
             raise RuntimeError(
                 ('Request to {} failed! HTTP Error Code: {} '

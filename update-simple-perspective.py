@@ -21,8 +21,10 @@ def parse_args():
     parser.add_argument('--ClientApiId',
                         help="CloudHealth client API ID.")
     parser.add_argument('--Name',
-                        required=True,
                         help="Name of the perspective.")
+    parser.add_argument('--Id',
+                        required=True,
+                        help="Id of the perspective.")
     parser.add_argument('--Tag',
                         help="The name of the tag the perspective will use "
                              "for it's groups. Defaults to the same as the "
@@ -103,6 +105,7 @@ def generate_schema(name, groups, tag=None, catchall_name=None):
 
 if __name__ == "__main__":
     args = parse_args()
+    perspective_id = args.Id
     logging_levels = {
         'debug':    logging.DEBUG,
         'info':     logging.INFO,
@@ -116,15 +119,16 @@ if __name__ == "__main__":
     console_handler = logging.StreamHandler()
     logger.addHandler(console_handler)
 
+
     with open(args.GroupsFile) as groups_file:
         groups_list = [group.rstrip() for group in list(groups_file)]
 
-    perspective_schema = generate_schema(args.Name,
-                             groups_list,
-                             args.Tag,
-                             args.CatchAllName)
-
     ch = CloudHealth(args.ApiKey, client_api_id=args.ClientApiId)
     perspective_client = ch.client('perspective')
-    perspective = perspective_client.create(perspective_schema)
+    perspective = perspective_client.get(perspective_id)
+    perspective_schema = generate_schema(perspective.name,
+                                         groups_list,
+                                         args.Tag,
+                                         args.CatchAllName)
+    perspective.update(perspective_schema)
     print(perspective.id)
