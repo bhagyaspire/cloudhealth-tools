@@ -1,9 +1,10 @@
+from operator import itemgetter
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class Perspectives:
+class PerspectiveClient:
     def __init__(self, http_client):
         self._http_client = http_client
         self._uri = 'v1/perspective_schemas/'
@@ -16,7 +17,7 @@ class Perspectives:
     def get(self, perspective_id):
         """Creates Perspective object with data from CloudHealth"""
         perspective = Perspective(self._http_client,
-                                  perspective_id=perspective_id)
+                                  perspective_id=str(perspective_id))
         perspective.get_schema()
         # Ideally CH would return a 404 if a perspective didn't exist but
         # instead if returns with a perspective named "Empty" that is empty.
@@ -26,16 +27,16 @@ class Perspectives:
             )
         return perspective
 
-    def create(self, schema):
+    def create(self, name):
         """Creates perspective based on provided schema dict"""
-        perspective = Perspective(self._http_client, schema=schema)
-        perspective.create()
+        perspective = Perspective(self._http_client)
+        perspective.create(name)
         return perspective
 
     def update(self, perspective_id, schema):
         """Updates perspective with specified id, using specified schema"""
         perspective = self.get(perspective_id)
-        perspective.update(schema)
+        perspective.update_cloudhealth(schema)
         return perspective
 
 
@@ -48,9 +49,11 @@ class Perspective:
         self._uri = 'v1/perspective_schemas'
 
         if perspective_id:
-            self._uri = self._uri + '/' + perspective_id
-            self._id = perspective_id
+            # This will set the perspective URL
+            self.id = perspective_id
         else:
+            # This will skip setting the perspective URL,
+            # as None isn't part of a valid URL
             self._id = None
 
         if schema:
@@ -66,16 +69,51 @@ class Perspective:
         constants = self.schema['constants']
         return constants
 
-    def create(self):
-        """Posts Schema to CloudHealth to create new perspective"""
+    @constants.setter
+    def constants(self, constants_list):
+        # Sort list alphabetically
+        constants_list = sorted(constants_list, key=itemgetter('name'))
+
+        # See if is_other rules is included, if not add it
+        if not any('is_other' in constants
+                   for constants in constants_list):
+            other_rule = {
+                        'name': 'Other',
+                        'ref_id': '1234567890',
+                        'is_other': 'true'
+                    }
+            constants_list.append(other_rule)
+        constants_schema = [{'type': 'Static Group', 'list': constants_list}]
+        self._schema['constants'] = constants_schema
+        #self.update_cloudhealth()
+
+    def create(self, name, schema=None):
+        """Creates an empty perspective or one based on a provided schema"""
+        if schema is None:
+            schema = {
+                'name': name,
+                'merges': [],
+                'constants': [{
+                    'list': [{
+                        'name': 'Other',
+                        'ref_id': '1234567890',
+                        'is_other': 'true'
+                    }],
+                    'type': 'Static Group'
+                }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
+
         if not self.id:
-            schema_data = {'schema': self.schema}
+            schema_data = {'schema': schema}
             response = self._http_client.post(self._uri, schema_data)
             perspective_id = response['message'].split(" ")[1]
-            self._id = perspective_id
+            self.id = perspective_id
+            self.get_schema()
         else:
             raise RuntimeError(
-                "Perspective with Id {} exists. Use update instead".format(
+                "Perspective with Id {} exists. Use update_cloudhealth instead".format(
                     self.id
                 )
             )
@@ -92,6 +130,7 @@ class Perspective:
     @id.setter
     def id(self, perspective_id):
         self._id = perspective_id
+        self._uri = self._uri + '/' + perspective_id
 
     @property
     def merges(self):
@@ -119,17 +158,21 @@ class Perspective:
     def schema(self, schema):
         self._schema = schema
 
-    def update(self, schema):
-        """Posts Schema to CloudHealth to update an existing perspective"""
+    def update_cloudhealth(self, schema=None):
+        """Updates cloud with objects state or with provided schema"""
+        if schema:
+            perspective_schema = schema
+        else:
+            perspective_schema = self.schema
+
         if self.id:
-            schema_data = {'schema': schema}
+            schema_data = {'schema': perspective_schema}
             response = self._http_client.put(self._uri, schema_data)
             self.get_schema()
         else:
             raise RuntimeError(
-                "Perspective Id must be set to update a perspective".format(
-                    self.id
-                )
+                "Perspective Id must be set to update_cloudhealth a "
+                "perspective".format(self.id)
             )
 
 

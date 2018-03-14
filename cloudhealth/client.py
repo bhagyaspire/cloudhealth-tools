@@ -1,7 +1,7 @@
 import json
 import logging
 
-from cloudhealth.perspective import Perspectives
+from cloudhealth.perspective import PerspectiveClient
 
 import requests
 
@@ -23,7 +23,7 @@ class HTTPClient:
         response = requests.get(url,
                                 params=self._params,
                                 headers=self._headers)
-        logger.debug(response)
+        logger.debug(response.json())
         if response.status_code != 200:
             raise RuntimeError(
                 ('Request to {} failed! HTTP Error Code: {} '
@@ -49,7 +49,7 @@ class HTTPClient:
                                  params=self._params,
                                  headers=self._headers,
                                  data=post_data)
-        logger.debug(response)
+        logger.debug(response.json())
         if response.status_code != 200:
             raise RuntimeError(
                 ('Request to {} failed! HTTP Error Code: {} '
@@ -75,7 +75,7 @@ class HTTPClient:
                                 params=self._params,
                                 headers=self._headers,
                                 data=post_data)
-        logger.debug(response)
+        logger.debug(response.json())
         if response.status_code != 200:
             raise RuntimeError(
                 ('Request to {} failed! HTTP Error Code: {} '
@@ -106,7 +106,7 @@ class CloudHealth:
 
     def client(self, client_type):
         if client_type == 'perspective':
-            return Perspectives(self._http_client)
+            return PerspectiveClient(self._http_client)
         else:
             raise ValueError('Unknown client_type')
 

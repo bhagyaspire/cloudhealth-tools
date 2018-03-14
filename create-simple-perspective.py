@@ -60,12 +60,12 @@ def generate_schema(name, groups, tag=None, catchall_name=None):
                 }]
             }
         }
-        constraint = {
+        constant = {
             "ref_id": ref_id,
             "name": group_name
         }
         rules.append(rule)
-        constants.append(constraint)
+        constants.append(constant)
 
     if catchall_name:
         rule = {
@@ -80,12 +80,12 @@ def generate_schema(name, groups, tag=None, catchall_name=None):
             }
         }
 
-        constraint = {
+        constant = {
                 "ref_id": "999999999",
                 "name": catchall_name
             }
         rules.append(rule)
-        constants.append(constraint)
+        constants.append(constant)
 
     schema = {
                 "name": name,
@@ -99,6 +99,26 @@ def generate_schema(name, groups, tag=None, catchall_name=None):
                 ]}
 
     return schema
+
+
+def generate_constants(groups, tag=None, catchall_name=None):
+    constants = []
+    for group_id, group_name in enumerate(groups):
+        ref_id = group_id + 1
+        constant = {
+            "ref_id": ref_id,
+            "name": group_name
+        }
+        constants.append(constant)
+
+    if catchall_name:
+        constant = {
+                "ref_id": "999999999",
+                "name": catchall_name
+            }
+        constants.append(constant)
+
+    return constants
 
 
 if __name__ == "__main__":
@@ -119,12 +139,16 @@ if __name__ == "__main__":
     with open(args.GroupsFile) as groups_file:
         groups_list = [group.rstrip() for group in list(groups_file)]
 
-    perspective_schema = generate_schema(args.Name,
-                             groups_list,
-                             args.Tag,
-                             args.CatchAllName)
-
     ch = CloudHealth(args.ApiKey, client_api_id=args.ClientApiId)
     perspective_client = ch.client('perspective')
-    perspective = perspective_client.create(perspective_schema)
-    print(perspective.id)
+    perspective = perspective_client.create(args.Name)
+
+    if args.Tag:
+        group_tag = args.Tag
+    else:
+        group_tag = args.Name
+
+    constants_list = generate_constants(groups_list,
+                                        args.Tag,
+                                        args.CatchAllName)
+    perspective.constants = constants_list

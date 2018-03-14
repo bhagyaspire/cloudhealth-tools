@@ -130,5 +130,5 @@ if __name__ == "__main__":
                                          groups_list,
                                          args.Tag,
                                          args.CatchAllName)
-    perspective.update(perspective_schema)
+    perspective.update_cloudhealth(perspective_schema)
     print(perspective.id)
