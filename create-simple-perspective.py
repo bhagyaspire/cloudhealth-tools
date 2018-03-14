@@ -101,7 +101,44 @@ def generate_schema(name, groups, tag=None, catchall_name=None):
     return schema
 
 
-def generate_constants(groups, tag=None, catchall_name=None):
+def generate_rules(groups, group_tag, catchall_name=None):
+    rules = []
+    for group_id, group_name in enumerate(groups):
+        ref_id = group_id + 1
+        rule = {
+            "type": "filter",
+            "asset": "AwsAsset",
+            "to": ref_id,
+            "condition": {
+                "clauses": [{
+                    "tag_field": [group_tag],
+                    "op": "=",
+                    "val": group_name
+                }]
+            }
+        }
+
+        rules.append(rule)
+
+    if catchall_name:
+        rule = {
+            "type": "filter",
+            "asset": "AwsAsset",
+            "to": "999999999",
+            "condition": {
+                "clauses": [{
+                    "tag_field": [group_tag],
+                    "op": "Has A Value"
+                }]
+            }
+        }
+
+        rules.append(rule)
+
+    return rules
+
+
+def generate_constants(groups, catchall_name=None):
     constants = []
     for group_id, group_name in enumerate(groups):
         ref_id = group_id + 1
@@ -149,6 +186,13 @@ if __name__ == "__main__":
         group_tag = args.Name
 
     constants_list = generate_constants(groups_list,
-                                        args.Tag,
                                         args.CatchAllName)
     perspective.constants = constants_list
+
+    rules_list = generate_rules(groups_list,
+                                group_tag,
+                                args.CatchAllName)
+    perspective.rules = rules_list
+    perspective.update_cloudhealth()
+    print(perspective.id)
+

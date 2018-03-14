@@ -85,7 +85,6 @@ class Perspective:
             constants_list.append(other_rule)
         constants_schema = [{'type': 'Static Group', 'list': constants_list}]
         self._schema['constants'] = constants_schema
-        #self.update_cloudhealth()
 
     def create(self, name, schema=None):
         """Creates an empty perspective or one based on a provided schema"""
@@ -146,6 +145,10 @@ class Perspective:
     def rules(self):
         rules = self.schema['rules']
         return rules
+
+    @rules.setter
+    def rules(self, rules_list):
+        self._schema['rules'] = rules_list
 
     @property
     def schema(self):
