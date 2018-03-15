@@ -142,6 +142,11 @@ class Perspective:
         name = self.schema['name']
         return name
 
+    @name.setter
+    def name(self, new_name):
+        self.schema['name'] = new_name
+
+
     @property
     def rules(self):
         rules = self.schema['rules']
