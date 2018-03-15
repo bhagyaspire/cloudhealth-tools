@@ -17,12 +17,32 @@ class HTTPClient:
         self._params = {'api_key': api_key,
                         'client_api_id': client_api_id}
 
-    def get(self, uri):
+    def _http_call(self, method, uri, data=None, additional_params=None):
         url = self._endpoint + uri
-        logger.debug("GET {} with {} headers".format(url, self._headers))
-        response = requests.get(url,
-                                params=self._params,
-                                headers=self._headers)
+        # Would be ideal to have better handling in the future, but just
+        # need to support dicts for now
+        if data is None:
+            post_data = None
+        elif type(data) is dict:
+            post_data = json.dumps(data)
+        elif type(data) is str:
+            post_data = data
+        else:
+            raise TypeError(
+                "data must either be dict or string (i.e. JSON)"
+            )
+
+        http_call = getattr(requests, method)
+        call_params = self._params
+        # if additional_params:
+        #     call_params.update(additional_params)
+        logger.debug("{} {} with params: {}".format(method.upper(), url, call_params))
+        if data:
+            logger.debug("{} Data: {}".format(method.upper(), post_data))
+        response = http_call(url,
+                             params=self._params,
+                             headers=call_params,
+                             data=post_data)
         logger.debug(response.json())
         if response.status_code != 200:
             raise RuntimeError(
@@ -31,57 +51,17 @@ class HTTPClient:
                     url, response.status_code, response.json()))
         return response.json()
 
-    def post(self, uri, data):
-        url = self._endpoint + uri
-        # Would be ideal to have better handling in the future, but just
-        # need to support dicts for now
-        if type(data) is dict:
-            post_data = json.dumps(data)
-        elif type(data) is str:
-            post_data = data
-        else:
-            raise TypeError(
-                "data must either be dict or string (i.e. JSON)"
-            )
-        logger.debug("POST {} with {} headers".format(url, self._headers))
-        logger.debug("POST Data: {}".format(post_data))
-        response = requests.post(url,
-                                 params=self._params,
-                                 headers=self._headers,
-                                 data=post_data)
-        logger.debug(response.json())
-        if response.status_code != 200:
-            raise RuntimeError(
-                ('Request to {} failed! HTTP Error Code: {} '
-                 'Response: {}').format(
-                    url, response.status_code, response.json()))
-        return response.json()
+    def delete(self, uri, params=None):
+        return self._http_call('delete', uri, additional_params=params)
 
-    def put(self, uri, data):
-        url = self._endpoint + uri
-        # Would be ideal to have better handling in the future, but just
-        # need to support dicts for now
-        if type(data) is dict:
-            post_data = json.dumps(data)
-        elif type(data) is str:
-            post_data = data
-        else:
-            raise TypeError(
-                "data must either be dict or string (i.e. JSON)"
-            )
-        logger.debug("PUT {} with {} headers".format(url, self._headers))
-        logger.debug("PUT Data: {}".format(post_data))
-        response = requests.put(url,
-                                params=self._params,
-                                headers=self._headers,
-                                data=post_data)
-        logger.debug(response.json())
-        if response.status_code != 200:
-            raise RuntimeError(
-                ('Request to {} failed! HTTP Error Code: {} '
-                 'Response: {}').format(
-                    url, response.status_code, response.json()))
-        return response.json()
+    def get(self, uri, params=None):
+        return self._http_call('get', uri, additional_params=params)
+
+    def post(self, uri, data, params=None):
+        return self._http_call('post', uri, data=data, additional_params=params)
+
+    def put(self, uri, data, params=None):
+        return self._http_call('put', uri, data=data, additional_params=params)
 
     @property
     def params(self):
