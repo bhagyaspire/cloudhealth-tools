@@ -103,6 +103,8 @@ class Perspective:
     @constants.setter
     def constants(self, constants_list):
         # Sort list alphabetically
+        # While we sort here, looks like the rules need to be sorted too
+        # Sorting rules is more complicated, so dropping from scope
         constants_list = sorted(constants_list, key=itemgetter('name'))
 
         # See if is_other rules is included, if not add it

@@ -16,7 +16,7 @@ def parse_args():
     )
 
     parser.add_argument('Action',
-                        choices=['create', 'update'],
+                        choices=['create', 'update', 'delete'],
                         help='Perspective action to take.')
     parser.add_argument('--ApiKey',
                         required=True,
@@ -31,7 +31,6 @@ def parse_args():
                              "for it's groups. Defaults to the same as the "
                              "perspective name.")
     parser.add_argument('--GroupsFile',
-                        required=True,
                         help="Path to the file containing the list of groups.")
     parser.add_argument('--CatchAllName',
                         help="If set, will create a catch-all group with this "
@@ -42,76 +41,13 @@ def parse_args():
     return parser.parse_args()
 
 
-def generate_schema(name, groups, tag=None, catchall_name=None):
-    rules = []
-    constants = []
-    if tag:
-        group_tag = tag
-    else:
-        group_tag = name
-    for group_id, group_name in enumerate(groups):
-        ref_id = group_id + 1
-        rule = {
-            "type": "filter",
-            "asset": "AwsAsset",
-            "to": ref_id,
-            "condition": {
-                "clauses": [{
-                    "tag_field": [group_tag],
-                    "op": "=",
-                    "val": group_name
-                }]
-            }
-        }
-        constant = {
-            "ref_id": ref_id,
-            "name": group_name
-        }
-        rules.append(rule)
-        constants.append(constant)
-
-    if catchall_name:
-        rule = {
-            "type": "filter",
-            "asset": "AwsAsset",
-            "to": "999999999",
-            "condition": {
-                "clauses": [{
-                    "tag_field": [group_tag],
-                    "op": "Has A Value"
-                }]
-            }
-        }
-
-        constant = {
-                "ref_id": "999999999",
-                "name": catchall_name
-            }
-        rules.append(rule)
-        constants.append(constant)
-
-    schema = {
-                "name": name,
-                "include_in_reports": "true",
-                "rules": rules,
-                "merges": [],
-                "constants": [
-                    {"type": "Static Group",
-                     "list": constants
-                     }
-                ]}
-
-    return schema
-
-
 def generate_rules(groups, group_tag, catchall_name=None):
     rules = []
-    for group_id, group_name in enumerate(groups):
-        ref_id = group_id + 1
+    for group_name, group_id in groups.items():
         rule = {
             "type": "filter",
             "asset": "AwsAsset",
-            "to": ref_id,
+            "to": group_id,
             "condition": {
                 "clauses": [{
                     "tag_field": [group_tag],
@@ -143,10 +79,9 @@ def generate_rules(groups, group_tag, catchall_name=None):
 
 def generate_constants(groups, catchall_name=None):
     constants = []
-    for group_id, group_name in enumerate(groups):
-        ref_id = group_id + 1
+    for group_name, group_id in groups.items():
         constant = {
-            "ref_id": ref_id,
+            "ref_id": group_id,
             "name": group_name
         }
         constants.append(constant)
@@ -176,12 +111,17 @@ if __name__ == "__main__":
     console_handler = logging.StreamHandler()
     logger.addHandler(console_handler)
 
-    with open(args.GroupsFile) as groups_file:
-        groups_list = [group.rstrip() for group in list(groups_file)]
+    if args.Action in ['create', 'update']:
+        if args.GroupsFile:
+            with open(args.GroupsFile) as groups_file:
+                groups_list = [group.rstrip() for group in list(groups_file)]
+        else:
+            raise RuntimeError(
+                "GroupFile option must be set for create or update"
+            )
 
     ch = CloudHealth(args.ApiKey, client_api_id=args.ClientApiId)
     perspective_client = ch.client('perspective')
-    perspective = perspective_client.create(args.Name)
 
     if args.Action == 'create':
         if args.Tag:
@@ -189,14 +129,63 @@ if __name__ == "__main__":
         else:
             group_tag = args.Name
 
-        constants_list = generate_constants(groups_list,
+        group_dict = {}
+        for number, group_name in enumerate(groups_list):
+            group_id = number + 1
+            group_dict[group_name] = str(group_id)
+
+        perspective = perspective_client.create(args.Name)
+        constants_list = generate_constants(group_dict,
                                             args.CatchAllName)
         perspective.constants = constants_list
 
-        rules_list = generate_rules(groups_list,
+        rules_list = generate_rules(group_dict,
                                     group_tag,
                                     args.CatchAllName)
         perspective.rules = rules_list
         perspective.update_cloudhealth()
         print(perspective.id)
+    elif args.Action == 'update':
+        perspective = perspective_client.get(args.Name)
+        # Get the tag used by the first rule as the group_tag
+        rules = perspective.rules
+        group_tag = rules[0]['condition']['clauses'][0]['tag_field'][0]
+
+        # first build a dict of existing groups and their IDs
+        # Exclude the system create group with the 'is_other' flag
+        existing_groups = {group['name']: group['ref_id']
+                           for group in perspective.constants[0]['list']
+                           if group.get('is_other') is None}
+
+        group_dict = {}
+        # if group exists then add it and it's id to group_dict,
+        # otherwise add new group with a place holder id
+        # (ch will generate a real id when group is created).
+        for number, group_name in enumerate(groups_list):
+            group_id = number + 1
+            if group_name in existing_groups.keys():
+                group_dict[group_name] = existing_groups[group_name]
+            else:
+                group_dict[group_name] = str(group_id)
+
+        constants_list = generate_constants(group_dict,
+                                            args.CatchAllName)
+        perspective.constants = constants_list
+
+        rules_list = generate_rules(group_dict,
+                                    group_tag,
+                                    args.CatchAllName)
+        perspective.rules = rules_list
+        perspective.update_cloudhealth()
+        print(perspective.id)
+
+    elif args.Action == 'delete':
+        perspective = perspective_client.get(args.Name)
+        perspective.delete()
+
+
+
+
+
+
 
