@@ -1,3 +1,4 @@
+import datetime
 from operator import itemgetter
 import logging
 
@@ -117,8 +118,19 @@ class Perspective:
                 )
             )
 
+    def delete(self):
+        # Perspective Names are not reusable for a tenant even if they are hard deleted
+        # Rename perspective prior to delete to allow the name to be reused
+        timestamp = datetime.datetime.now()
+        self.name = self.name + str(timestamp)
+        print(self.schema)
+        self.update_cloudhealth()
+        delete_params = {'force': True, 'hard_delete': True}
+        response = self._http_client.delete(self._uri, params=delete_params)
+        self.schema = None
+
     def get_schema(self):
-        """get's latest schema from CloudHealth"""
+        """gets the latest schema from CloudHealth"""
         response = self._http_client.get(self._uri)
         self._schema = response['schema']
 
@@ -140,6 +152,10 @@ class Perspective:
     def name(self):
         name = self.schema['name']
         return name
+
+    @name.setter
+    def name(self, new_name):
+        self.schema['name'] = new_name
 
     @property
     def rules(self):
