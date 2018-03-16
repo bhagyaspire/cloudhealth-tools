@@ -10,13 +10,36 @@ class PerspectiveClient:
         self._http_client = http_client
         self._uri = 'v1/perspective_schemas/'
 
-    def index(self):
-        """Returns dict of PerspectiveIds, Names and Active Status"""
-        response = self._http_client.get(self._uri)
-        return response
+    def _get_perspective_id(self, perspective_input):
+        """Returns the perspective id based on input.
 
-    def get(self, perspective_id):
+        Determines if perspective is an id (i.e. int) or a name. If name will
+        make API call to determine it's id
+        """
+        try:
+            int(perspective_input)
+            return str(perspective_input)
+        except ValueError:
+            perspectives = self.index()
+            for perspective_id, perspective_info in perspectives.items():
+                if perspective_info['name'] == perspective_input:
+                    return perspective_id
+
+    def create(self, name):
+        """Creates perspective. Schema will be 'empty'. """
+        perspective = Perspective(self._http_client)
+        perspective.create(name)
+        return perspective
+
+    def delete(self, perspective_input):
+        perspective_id = self._get_perspective_id(perspective_input)
+        perspective = Perspective(self._http_client,
+                                  perspective_id=str(perspective_id))
+        perspective.delete()
+
+    def get(self, perspective_input):
         """Creates Perspective object with data from CloudHealth"""
+        perspective_id = self._get_perspective_id(perspective_input)
         perspective = Perspective(self._http_client,
                                   perspective_id=str(perspective_id))
         perspective.get_schema()
@@ -24,19 +47,26 @@ class PerspectiveClient:
         # instead if returns with a perspective named "Empty" that is empty.
         if perspective.name == 'Empty':
             raise RuntimeError(
-                "Perspective with id {} does not exist.".format(perspective_id)
+                "Perspective with id {} does not exist.".format(perspective)
             )
         return perspective
 
-    def create(self, name):
-        """Creates perspective based on provided schema dict"""
-        perspective = Perspective(self._http_client)
-        perspective.create(name)
-        return perspective
+    def index(self, active=None):
+        """Returns dict of PerspectiveIds, Names and Active Status"""
+        response = self._http_client.get(self._uri)
+        if active is None:
+            perspectives = response
+        else:
+            perspectives = {
+                perspective_id: perspective_info for
+                perspective_id, perspective_info in response.items()
+                if perspective_info['active'] == active
+            }
+        return perspectives
 
-    def update(self, perspective_id, schema):
+    def update(self, perspective_input, schema):
         """Updates perspective with specified id, using specified schema"""
-        perspective = self.get(perspective_id)
+        perspective = self.get(perspective_input)
         perspective.update_cloudhealth(schema)
         return perspective
 
@@ -119,11 +149,11 @@ class Perspective:
             )
 
     def delete(self):
-        # Perspective Names are not reusable for a tenant even if they are hard deleted
-        # Rename perspective prior to delete to allow the name to be reused
+        # Perspective Names are not reusable for a tenant even if they are
+        # hard deleted. Rename perspective prior to delete to allow the name
+        # to be reused
         timestamp = datetime.datetime.now()
         self.name = self.name + str(timestamp)
-        print(self.schema)
         self.update_cloudhealth()
         delete_params = {'force': True, 'hard_delete': True}
         response = self._http_client.delete(self._uri, params=delete_params)

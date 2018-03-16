@@ -15,6 +15,9 @@ def parse_args():
                     "tag, but does not belong to any other groups."
     )
 
+    parser.add_argument('Action',
+                        choices=['create', 'update'],
+                        help='Perspective action to take.')
     parser.add_argument('--ApiKey',
                         required=True,
                         help="CloudHealth API Key.")
@@ -180,19 +183,20 @@ if __name__ == "__main__":
     perspective_client = ch.client('perspective')
     perspective = perspective_client.create(args.Name)
 
-    if args.Tag:
-        group_tag = args.Tag
-    else:
-        group_tag = args.Name
+    if args.Action == 'create':
+        if args.Tag:
+            group_tag = args.Tag
+        else:
+            group_tag = args.Name
 
-    constants_list = generate_constants(groups_list,
-                                        args.CatchAllName)
-    perspective.constants = constants_list
+        constants_list = generate_constants(groups_list,
+                                            args.CatchAllName)
+        perspective.constants = constants_list
 
-    rules_list = generate_rules(groups_list,
-                                group_tag,
-                                args.CatchAllName)
-    perspective.rules = rules_list
-    perspective.update_cloudhealth()
-    print(perspective.id)
+        rules_list = generate_rules(groups_list,
+                                    group_tag,
+                                    args.CatchAllName)
+        perspective.rules = rules_list
+        perspective.update_cloudhealth()
+        print(perspective.id)
 

@@ -34,9 +34,11 @@ class HTTPClient:
 
         http_call = getattr(requests, method)
         call_params = self._params
-        # if additional_params:
-        #     call_params.update(additional_params)
-        logger.debug("{} {} with params: {}".format(method.upper(), url, call_params))
+        if additional_params:
+            call_params.update(additional_params)
+        logger.debug("{} {} with params: {}".format(method.upper(),
+                                                    url,
+                                                    call_params))
         if data:
             logger.debug("{} Data: {}".format(method.upper(), post_data))
         response = http_call(url,
