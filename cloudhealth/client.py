@@ -40,8 +40,8 @@ class HTTPClient:
         if data:
             logger.debug("{} Data: {}".format(method.upper(), post_data))
         response = http_call(url,
-                             params=self._params,
-                             headers=call_params,
+                             params=call_params,
+                             headers=self._headers,
                              data=post_data)
         logger.debug(response.json())
         if response.status_code != 200:
