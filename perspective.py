@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import os
 
 from cloudhealth.client import CloudHealth
 
@@ -16,11 +17,11 @@ def parse_args():
     )
 
     parser.add_argument('Action',
-                        choices=['create', 'update', 'delete'],
+                        choices=['create-simple', 'update-simple', 'delete'],
                         help='Perspective action to take.')
     parser.add_argument('--ApiKey',
-                        required=True,
-                        help="CloudHealth API Key.")
+                        help="CloudHealth API Key. May also be set via the "
+                             "CH_API_KEY environmental variable.")
     parser.add_argument('--ClientApiId',
                         help="CloudHealth client API ID.")
     parser.add_argument('--Name',
@@ -33,7 +34,7 @@ def parse_args():
     parser.add_argument('--GroupsFile',
                         help="Path to the file containing the list of groups.")
     parser.add_argument('--CatchAllName',
-                        help="If set, will create a catch-all group with this "
+                        help="If set, will create a catch all group with this "
                              "name")
     parser.add_argument('--LogLevel',
                         default='warn',
@@ -41,7 +42,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def generate_rules(groups, group_tag, catchall_name=None):
+def generate_rules(groups, group_tag, catchall_group=None):
     rules = []
     for group_name, group_id in groups.items():
         rule = {
@@ -59,11 +60,11 @@ def generate_rules(groups, group_tag, catchall_name=None):
 
         rules.append(rule)
 
-    if catchall_name:
+    if catchall_group:
         rule = {
             "type": "filter",
             "asset": "AwsAsset",
-            "to": "999999999",
+            "to": catchall_group['ref_id'],
             "condition": {
                 "clauses": [{
                     "tag_field": [group_tag],
@@ -77,7 +78,7 @@ def generate_rules(groups, group_tag, catchall_name=None):
     return rules
 
 
-def generate_constants(groups, catchall_name=None):
+def generate_constants(groups, catchall_group=None):
     constants = []
     for group_name, group_id in groups.items():
         constant = {
@@ -86,10 +87,10 @@ def generate_constants(groups, catchall_name=None):
         }
         constants.append(constant)
 
-    if catchall_name:
+    if catchall_group:
         constant = {
-                "ref_id": "999999999",
-                "name": catchall_name
+                "ref_id": catchall_group['ref_id'],
+                "name": catchall_group['name']
             }
         constants.append(constant)
 
@@ -111,7 +112,17 @@ if __name__ == "__main__":
     console_handler = logging.StreamHandler()
     logger.addHandler(console_handler)
 
-    if args.Action in ['create', 'update']:
+    if args.ApiKey:
+        api_key = args.ApiKey
+    elif os.environ.get('CH_API_KEY'):
+        api_key = os.environ['CH_API_KEY']
+    else:
+        raise RuntimeError(
+            "API KEY must be set with either --ApiKey or "
+            "CH_API_KEY environment variable."
+        )
+
+    if args.Action in ['create-simple', 'update-simple']:
         if args.GroupsFile:
             with open(args.GroupsFile) as groups_file:
                 groups_list = [group.rstrip() for group in list(groups_file)]
@@ -120,10 +131,10 @@ if __name__ == "__main__":
                 "GroupFile option must be set for create or update"
             )
 
-    ch = CloudHealth(args.ApiKey, client_api_id=args.ClientApiId)
+    ch = CloudHealth(api_key, client_api_id=args.ClientApiId)
     perspective_client = ch.client('perspective')
 
-    if args.Action == 'create':
+    if args.Action == 'create-simple':
         if args.Tag:
             group_tag = args.Tag
         else:
@@ -135,17 +146,23 @@ if __name__ == "__main__":
             group_dict[group_name] = str(group_id)
 
         perspective = perspective_client.create(args.Name)
+
+        if args.CatchAllName:
+            catchall_group = {'name': args.CatchAllName,
+                              'ref_id': '999999999'}
+        else:
+            catchall_group = None
         constants_list = generate_constants(group_dict,
-                                            args.CatchAllName)
+                                            catchall_group)
         perspective.constants = constants_list
 
         rules_list = generate_rules(group_dict,
                                     group_tag,
-                                    args.CatchAllName)
+                                    catchall_group)
         perspective.rules = rules_list
         perspective.update_cloudhealth()
         print(perspective.id)
-    elif args.Action == 'update':
+    elif args.Action == 'update-simple':
         perspective = perspective_client.get(args.Name)
         # Get the tag used by the first rule as the group_tag
         rules = perspective.rules
@@ -168,13 +185,23 @@ if __name__ == "__main__":
             else:
                 group_dict[group_name] = str(group_id)
 
+        if args.CatchAllName:
+            if existing_groups.get(args.CatchAllName):
+                ref_id = existing_groups[args.CatchAllName]
+            else:
+                ref_id = '999999999'
+            catchall_group = {'name': args.CatchAllName,
+                              'ref_id': ref_id}
+        else:
+            catchall_group = None
+
         constants_list = generate_constants(group_dict,
-                                            args.CatchAllName)
+                                            catchall_group)
         perspective.constants = constants_list
 
         rules_list = generate_rules(group_dict,
                                     group_tag,
-                                    args.CatchAllName)
+                                    catchall_group)
         perspective.rules = rules_list
         perspective.update_cloudhealth()
         print(perspective.id)
