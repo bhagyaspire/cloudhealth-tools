@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import os
 
 from cloudhealth.client import CloudHealth
 
@@ -19,8 +20,8 @@ def parse_args():
                         choices=['create', 'update', 'delete'],
                         help='Perspective action to take.')
     parser.add_argument('--ApiKey',
-                        required=True,
-                        help="CloudHealth API Key.")
+                        help="CloudHealth API Key. May also be set via the "
+                             "CH_API_KEY environmental variable.")
     parser.add_argument('--ClientApiId',
                         help="CloudHealth client API ID.")
     parser.add_argument('--Name',
@@ -111,6 +112,16 @@ if __name__ == "__main__":
     console_handler = logging.StreamHandler()
     logger.addHandler(console_handler)
 
+    if args.ApiKey:
+        api_key = args.ApiKey
+    elif os.environ.get('CH_API_KEY'):
+        api_key = os.environ['CH_API_KEY']
+    else:
+        raise RuntimeError(
+            "API KEY must be set with either --ApiKey or "
+            "CH_API_KEY environment variable."
+        )
+
     if args.Action in ['create', 'update']:
         if args.GroupsFile:
             with open(args.GroupsFile) as groups_file:
@@ -120,7 +131,7 @@ if __name__ == "__main__":
                 "GroupFile option must be set for create or update"
             )
 
-    ch = CloudHealth(args.ApiKey, client_api_id=args.ClientApiId)
+    ch = CloudHealth(api_key, client_api_id=args.ClientApiId)
     perspective_client = ch.client('perspective')
 
     if args.Action == 'create':
