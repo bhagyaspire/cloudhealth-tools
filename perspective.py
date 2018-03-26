@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import logging
 import os
 
@@ -17,7 +18,10 @@ def parse_args():
     )
 
     parser.add_argument('Action',
-                        choices=['create-simple', 'update-simple', 'delete'],
+                        choices=['create-simple',
+                                 'update-simple',
+                                 'delete',
+                                 'get-schema'],
                         help='Perspective action to take.')
     parser.add_argument('--ApiKey',
                         help="CloudHealth API Key. May also be set via the "
@@ -45,7 +49,7 @@ def parse_args():
 def generate_rules(groups, group_tag, catchall_group=None):
     rules = []
     for group_name, group_id in groups.items():
-        rule = {
+        asset_rule = {
             "type": "filter",
             "asset": "AwsAsset",
             "to": group_id,
@@ -58,7 +62,21 @@ def generate_rules(groups, group_tag, catchall_group=None):
             }
         }
 
-        rules.append(rule)
+        emr_cluster_rule = {
+            "type": "filter",
+            "asset": "AwsEmrCluster",
+            "to": group_id,
+            "condition": {
+                "clauses": [{
+                    "tag_field": [group_tag],
+                    "op": "=",
+                    "val": group_name
+                }]
+            }
+        }
+
+        rules.append(asset_rule)
+        rules.append(emr_cluster_rule)
 
     if catchall_group:
         rule = {
@@ -124,7 +142,7 @@ if __name__ == "__main__":
 
     if args.Action in ['create-simple', 'update-simple']:
         if args.GroupsFile:
-            with open(args.GroupsFile) as groups_file:
+            with open(args.GroupsFile, encoding='utf-8-sig') as groups_file:
                 groups_list = [group.rstrip() for group in list(groups_file)]
         else:
             raise RuntimeError(
@@ -142,6 +160,12 @@ if __name__ == "__main__":
 
         group_dict = {}
         for number, group_name in enumerate(groups_list):
+            # If duplicate then skip and log warning
+            if group_dict.get(group_name) is not None:
+                logger.warning(
+                    "Skipping Duplicate Group Name {}".format(group_name)
+                )
+                continue
             group_id = number + 1
             group_dict[group_name] = str(group_id)
 
@@ -179,6 +203,12 @@ if __name__ == "__main__":
         # otherwise add new group with a place holder id
         # (ch will generate a real id when group is created).
         for number, group_name in enumerate(groups_list):
+            # If duplicate then skip and log warning
+            if group_dict.get(group_name) is not None:
+                logger.warning(
+                    "Skipping Duplicate Group Name {}".format(group_name)
+                )
+                continue
             group_id = number + 1
             if group_name in existing_groups.keys():
                 group_dict[group_name] = existing_groups[group_name]
@@ -205,14 +235,9 @@ if __name__ == "__main__":
         perspective.rules = rules_list
         perspective.update_cloudhealth()
         print(perspective.id)
-
     elif args.Action == 'delete':
         perspective = perspective_client.get(args.Name)
         perspective.delete()
-
-
-
-
-
-
-
+    elif args.Action == 'get-schema':
+        perspective = perspective_client.get(args.Name)
+        print(json.dumps(perspective.schema))
