@@ -18,7 +18,7 @@ You can set the API Key either via a `CH_API_KEY` environment variable or via a 
 
 ### perspective.py
 
-Utility to create, update and delete perspectives. Currently only supports creating and updating "simple perspectives". In this case a simple perspective is where all groups are based off a the same tag value.
+Utility to create, update and delete perspectives. Currently only supports creating and updating "simple perspectives" that include AWS Assets (both Asset and EmrCluster Asset Types). In this case a simple perspective is where all groups are based off a the same tag value.
 
 Groups are created based off a list of values stored in a text file. One group name per line. Group names are case sensitive.
 
