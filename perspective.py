@@ -62,6 +62,19 @@ def generate_rules(groups, group_tag, catchall_group=None):
             }
         }
 
+        taggable_asset_rule = {
+            "type": "filter",
+            "asset": "AwsTaggableAsset",
+            "to": group_id,
+            "condition": {
+                "clauses": [{
+                    "tag_field": [group_tag],
+                    "op": "=",
+                    "val": group_name
+                }]
+            }
+        }
+
         emr_cluster_rule = {
             "type": "filter",
             "asset": "AwsEmrCluster",
@@ -76,6 +89,7 @@ def generate_rules(groups, group_tag, catchall_group=None):
         }
 
         rules.append(asset_rule)
+        rules.append(taggable_asset_rule)
         rules.append(emr_cluster_rule)
 
     if catchall_group:
