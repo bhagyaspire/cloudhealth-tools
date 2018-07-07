@@ -2,6 +2,8 @@ import datetime
 from operator import itemgetter
 import logging
 
+import yaml
+
 logger = logging.getLogger(__name__)
 
 
@@ -158,7 +160,7 @@ class Perspective:
         self.update_cloudhealth()
         delete_params = {'force': True, 'hard_delete': True}
         response = self._http_client.delete(self._uri, params=delete_params)
-        self.schema = None
+        self._schema = None
 
     def _get_ref_id_by_name(self, constant_name, constant_type="Static Group"):
         constants = [constant for constant in self.constants
@@ -186,6 +188,15 @@ class Perspective:
         self._uri = self._uri + '/' + perspective_id
 
     @property
+    def include_in_reports(self):
+        include_in_reports = self.schema['include_in_reports']
+        return include_in_reports
+
+    @include_in_reports.setter
+    def include_in_reports(self, toggle):
+        self._schema['include_in_reports'] = toggle
+
+    @property
     def merges(self):
         merges = self.schema['merges']
         return merges
@@ -197,7 +208,7 @@ class Perspective:
 
     @name.setter
     def name(self, new_name):
-        self.schema['name'] = new_name
+        self._schema['name'] = new_name
 
     @property
     def rules(self):
@@ -215,8 +226,7 @@ class Perspective:
 
         return self._schema
 
-    @schema.setter
-    def schema(self, schema):
+    def update_schema(self, schema):
         self._schema = schema
 
     def update_cloudhealth(self, schema=None):
