@@ -16,6 +16,12 @@ def search_spec():
         spec = yaml.load(spec_file)
     return spec
 
+@pytest.fixture()
+def group_by_tag_value_spec():
+    with open('tests/specs/autogroup.yaml') as spec_file:
+        spec = yaml.load(spec_file)
+    return spec
+
 
 @pytest.fixture()
 def new_perspective():
@@ -161,6 +167,100 @@ def test_search_perspective(new_perspective, search_spec):
                                                'tag_field': ['Tier'],
                                                'val': 'WWW'}],
                                   'combine_with': 'OR'},
+                    'to': 103,
+                    'type': 'filter'},
+                   {'asset': 'AwsAsset',
+                    'condition': {'clauses': [{'op': 'Has A Value',
+                                               'tag_field': ['Service']}]},
+                    'to': 104,
+                    'type': 'filter'},
+                   {'asset': 'AwsTaggableAsset',
+                    'condition': {'clauses': [{'op': 'Has A Value',
+                                               'tag_field': ['Service']}]},
+                    'to': 104,
+                    'type': 'filter'},
+                   {'asset': 'AwsEmrCluster',
+                    'condition': {'clauses': [{'op': 'Has A Value',
+                                               'tag_field': ['Service']}]},
+                    'to': 104,
+                    'type': 'filter'}]}
+
+    differences = DeepDiff(expected_schema, perspective.schema)
+    assert differences == {}, (
+        "DeepDiff reports the following differences between expected schema "
+        "and generated schema: {}".format(differences)
+    )
+
+
+def test_group_by_tag_value_perspective(new_perspective,
+                                        group_by_tag_value_spec):
+    perspective = new_perspective
+    perspective.update_spec(group_by_tag_value_spec)
+
+    expected_schema = {
+        'constants': [{'list': [{'is_other': 'true',
+                          'name': 'Other',
+                          'ref_id': '1234567890'},
+                         {'name': 'Web', 'ref_id': 101},
+                         {'name': 'App', 'ref_id': 102},
+                         {'name': 'DB', 'ref_id': 103},
+                         {'name': 'Non-Conforming', 'ref_id': 104}],
+                'type': 'Static Group'}],
+         'include_in_reports': 'true',
+         'merges': [],
+         'name': 'ServiceAutoGroup',
+         'rules': [{'asset': 'AwsAsset',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'Web'}]},
+                    'to': 101,
+                    'type': 'filter'},
+                   {'asset': 'AwsTaggableAsset',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'Web'}]},
+                    'to': 101,
+                    'type': 'filter'},
+                   {'asset': 'AwsEmrCluster',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'Web'}]},
+                    'to': 101,
+                    'type': 'filter'},
+                   {'asset': 'AwsAsset',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'App'}]},
+                    'to': 102,
+                    'type': 'filter'},
+                   {'asset': 'AwsTaggableAsset',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'App'}]},
+                    'to': 102,
+                    'type': 'filter'},
+                   {'asset': 'AwsEmrCluster',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'App'}]},
+                    'to': 102,
+                    'type': 'filter'},
+                   {'asset': 'AwsAsset',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'DB'}]},
+                    'to': 103,
+                    'type': 'filter'},
+                   {'asset': 'AwsTaggableAsset',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'DB'}]},
+                    'to': 103,
+                    'type': 'filter'},
+                   {'asset': 'AwsEmrCluster',
+                    'condition': {'clauses': [{'op': '=',
+                                               'tag_field': ['Service'],
+                                               'val': 'DB'}]},
                     'to': 103,
                     'type': 'filter'},
                    {'asset': 'AwsAsset',

@@ -243,6 +243,35 @@ class Perspective:
         response = self._http_client.delete(self._uri, params=delete_params)
         self._schema = None
 
+    @staticmethod
+    def _expand_group_by_tag_value(group):
+        conditions = group['Conditions']
+        if len(conditions) != 1:
+            raise RuntimeError(
+                "GroupByTagValue only supports a single condition. The "
+                "following conditions were specified: {}".format(conditions)
+            )
+        assets = group['Assets']
+        tag_name = conditions[0]['Name']
+        tag_values = conditions[0]['Values']
+        expanded_groups = []
+
+        for tag_value in tag_values:
+            expanded_group = {
+                'Name': tag_value,
+                'Type': 'Search',
+                'Assets': assets,
+                'Conditions': [
+                    {
+                        'Type': 'Tag',
+                        'Name': tag_name,
+                        'Values': [tag_value]
+                    }
+                ]
+            }
+            expanded_groups.append(expanded_group)
+        return expanded_groups
+
     @property
     def _get_new_ref_id(self):
         self._new_ref_id += 1
@@ -349,35 +378,6 @@ class Perspective:
 
     def update_schema(self, schema):
         self._schema = schema
-
-    @staticmethod
-    def _expand_group_by_tag_value(group):
-        conditions = group['Conditions']
-        if len(conditions) != 1:
-            raise RuntimeError(
-                "GroupByTagValue only supports a single condition. The "
-                "following conditions were specified: {}".format(conditions)
-            )
-        assets = group['Assets']
-        tag_name = conditions[0]['Name']
-        tag_values = conditions[0]['Values']
-        expanded_groups = []
-
-        for tag_value in tag_values:
-            expanded_group = {
-                'Name': tag_value,
-                'Type': 'Search',
-                'Assets': assets,
-                'Conditions': [
-                    {
-                        'Type': 'Tag',
-                        'Name': tag_name,
-                        'Values': [tag_value]
-                    }
-                ]
-            }
-            expanded_groups.append(expanded_group)
-        return expanded_groups
 
     def update_spec(self, spec):
         logger.debug(
