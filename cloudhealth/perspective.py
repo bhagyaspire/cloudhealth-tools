@@ -218,7 +218,10 @@ class Perspective:
 
         if self.id:
             schema_data = {'schema': perspective_schema}
-            response = self._http_client.put(self._uri, schema_data)
+            update_params = {'allow_group_delete': True}
+            response = self._http_client.put(self._uri,
+                                             schema_data,
+                                             params=update_params)
             self.get_schema()
         else:
             raise RuntimeError(
