@@ -160,7 +160,8 @@ if __name__ == "__main__":
                 groups_list = [group.rstrip() for group in list(groups_file)]
         else:
             raise RuntimeError(
-                "GroupFile option must be set for create or update"
+                "GroupFile option must be set for create-simple "
+                "or update-simple"
             )
 
     ch = CloudHealth(api_key, client_api_id=args.ClientApiId)

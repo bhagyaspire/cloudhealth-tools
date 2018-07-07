@@ -145,9 +145,8 @@ class Perspective:
             self.get_schema()
         else:
             raise RuntimeError(
-                "Perspective with Id {} exists. Use update_cloudhealth instead".format(
-                    self.id
-                )
+                "Perspective with Id {} exists. Use update_cloudhealth "
+                "instead".format(self.id)
             )
 
     def delete(self):
@@ -160,6 +159,17 @@ class Perspective:
         delete_params = {'force': True, 'hard_delete': True}
         response = self._http_client.delete(self._uri, params=delete_params)
         self.schema = None
+
+    def _get_ref_id_by_name(self, constant_name, constant_type="Static Group"):
+        constants = [constant for constant in self.constants
+                     if constant['type'] == constant_type]
+        for constant in constants:
+            for item in constant['list']:
+                if item['name'] == constant_name and not item.get('is_other'):
+                    return item['ref_id']
+        # If we get here then no constant with the specified name has been
+        # found.
+        return None
 
     def get_schema(self):
         """gets the latest schema from CloudHealth"""
