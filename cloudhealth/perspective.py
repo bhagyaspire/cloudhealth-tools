@@ -130,7 +130,14 @@ class Perspective:
             schema = {
                 'name': name,
                 'merges': [],
-                'constants': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
                 'include_in_reports': 'true',
                 'rules': []
             }
@@ -344,6 +351,9 @@ class Perspective:
         self._schema = schema
 
     def update_spec(self, spec):
+        logger.debug(
+            "Updated schema using spec: {}".format(spec)
+        )
         self.name = spec['Name']
         if spec.get('Reports'):
             self.include_in_reports = spec['Reports']

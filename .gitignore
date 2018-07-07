@@ -2,3 +2,4 @@
 .idea/
 scratch/
 **/__pycache__/**
+**/.pytest_cache/**
