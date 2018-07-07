@@ -350,6 +350,35 @@ class Perspective:
     def update_schema(self, schema):
         self._schema = schema
 
+    @staticmethod
+    def _expand_group_by_tag_value(group):
+        conditions = group['Conditions']
+        if len(conditions) != 1:
+            raise RuntimeError(
+                "GroupByTagValue only supports a single condition. The "
+                "following conditions were specified: {}".format(conditions)
+            )
+        assets = group['Assets']
+        tag_name = conditions[0]['Name']
+        tag_values = conditions[0]['Values']
+        expanded_groups = []
+
+        for tag_value in tag_values:
+            expanded_group = {
+                'Name': tag_value,
+                'Type': 'Search',
+                'Assets': assets,
+                'Conditions': [
+                    {
+                        'Type': 'Tag',
+                        'Name': tag_name,
+                        'Values': [tag_value]
+                    }
+                ]
+            }
+            expanded_groups.append(expanded_group)
+        return expanded_groups
+
     def update_spec(self, spec):
         logger.debug(
             "Updated schema using spec: {}".format(spec)
@@ -357,8 +386,17 @@ class Perspective:
         self.name = spec['Name']
         if spec.get('Reports'):
             self.include_in_reports = spec['Reports']
+
         for group in spec['Groups']:
-            self._spec_group_to_schema(group)
+            # If GroupByTagValue then expand groups and add each expanded
+            # group to the schema.
+            if group['Type'] == 'GroupByTagValue':
+                expanded_groups = self._expand_group_by_tag_value(group)
+                for expanded_group in expanded_groups:
+                    self._spec_group_to_schema(expanded_group)
+            else:
+                # If not GroupByTagValue then just add the group to the schema
+                self._spec_group_to_schema(group)
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
