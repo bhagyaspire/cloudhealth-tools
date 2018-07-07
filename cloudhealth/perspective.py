@@ -100,140 +100,6 @@ class Perspective:
     def __repr__(self):
         return str(self.schema)
 
-    @property
-    def constants(self):
-        constants = self.schema['constants']
-        return constants
-
-    @constants.setter
-    def constants(self, constants_list):
-        # Sort list alphabetically
-        # While we sort here, looks like the rules need to be sorted too
-        # Sorting rules is more complicated, so dropping from scope
-        constants_list = sorted(constants_list, key=itemgetter('name'))
-
-        # See if is_other rules is included, if not add it
-        if not any('is_other' in constants
-                   for constants in constants_list):
-            other_rule = {
-                        'name': 'Other',
-                        'ref_id': '1234567890',
-                        'is_other': 'true'
-                    }
-            constants_list.append(other_rule)
-        constants_schema = [{'type': 'Static Group', 'list': constants_list}]
-        self._schema['constants'] = constants_schema
-
-    def create(self, name, schema=None):
-        """Creates an empty perspective or one based on a provided schema"""
-        if schema is None:
-            schema = {
-                'name': name,
-                'merges': [],
-                'constants': [{
-                            'list': [{
-                                'name': 'Other',
-                                'ref_id': '1234567890',
-                                'is_other': 'true'
-                            }],
-                            'type': 'Static Group'
-                        }],
-                'include_in_reports': 'true',
-                'rules': []
-            }
-
-        if not self.id:
-            schema_data = {'schema': schema}
-            response = self._http_client.post(self._uri, schema_data)
-            perspective_id = response['message'].split(" ")[1]
-            self.id = perspective_id
-            self.get_schema()
-        else:
-            raise RuntimeError(
-                "Perspective with Id {} exists. Use update_cloudhealth "
-                "instead".format(self.id)
-            )
-
-    def delete(self):
-        # Perspective Names are not reusable for a tenant even if they are
-        # hard deleted. Rename perspective prior to delete to allow the name
-        # to be reused
-        timestamp = datetime.datetime.now()
-        self.name = self.name + str(timestamp)
-        self.update_cloudhealth()
-        delete_params = {'force': True, 'hard_delete': True}
-        response = self._http_client.delete(self._uri, params=delete_params)
-        self._schema = None
-
-    def _get_ref_id_by_name(self, constant_name, constant_type="Static Group"):
-        constants = [constant for constant in self.constants
-                     if constant['type'] == constant_type]
-        for constant in constants:
-            for item in constant['list']:
-                if item['name'] == constant_name and not item.get('is_other'):
-                    return item['ref_id']
-        # If we get here then no constant with the specified name has been
-        # found.
-        return None
-
-    def get_schema(self):
-        """gets the latest schema from CloudHealth"""
-        response = self._http_client.get(self._uri)
-        self._schema = response['schema']
-
-    @property
-    def id(self):
-        return self._id
-
-    @id.setter
-    def id(self, perspective_id):
-        self._id = perspective_id
-        self._uri = self._uri + '/' + perspective_id
-
-    @property
-    def include_in_reports(self):
-        include_in_reports = self.schema['include_in_reports']
-        return include_in_reports
-
-    @include_in_reports.setter
-    def include_in_reports(self, toggle):
-        self._schema['include_in_reports'] = toggle
-
-    @property
-    def merges(self):
-        merges = self.schema['merges']
-        return merges
-
-    @property
-    def name(self):
-        name = self.schema['name']
-        return name
-
-    @name.setter
-    def name(self, new_name):
-        self._schema['name'] = new_name
-
-    @property
-    def _get_new_ref_id(self):
-        self._new_ref_id += 1
-        return self._new_ref_id
-
-    @property
-    def rules(self):
-        rules = self.schema['rules']
-        return rules
-
-    @rules.setter
-    def rules(self, rules_list):
-        self._schema['rules'] = rules_list
-
-    @property
-    def schema(self):
-        if not self._schema:
-            self.get_schema()
-
-        return self._schema
-
     def _add_constant(self, constant_name, constant_type):
         # Return current ref_id if constant already exists
         ref_id = self._get_ref_id_by_name(constant_name,
@@ -312,6 +178,140 @@ class Perspective:
 
         self._schema['rules'].append(filter_rule)
 
+    @property
+    def constants(self):
+        constants = self.schema['constants']
+        return constants
+
+    @constants.setter
+    def constants(self, constants_list):
+        # Sort list alphabetically
+        # While we sort here, looks like the rules need to be sorted too
+        # Sorting rules is more complicated, so dropping from scope
+        constants_list = sorted(constants_list, key=itemgetter('name'))
+
+        # See if is_other rules is included, if not add it
+        if not any('is_other' in constants
+                   for constants in constants_list):
+            other_rule = {
+                        'name': 'Other',
+                        'ref_id': '1234567890',
+                        'is_other': 'true'
+                    }
+            constants_list.append(other_rule)
+        constants_schema = [{'type': 'Static Group', 'list': constants_list}]
+        self._schema['constants'] = constants_schema
+
+    def create(self, name, schema=None):
+        """Creates an empty perspective or one based on a provided schema"""
+        if schema is None:
+            schema = {
+                'name': name,
+                'merges': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
+
+        if not self.id:
+            schema_data = {'schema': schema}
+            response = self._http_client.post(self._uri, schema_data)
+            perspective_id = response['message'].split(" ")[1]
+            self.id = perspective_id
+            self.get_schema()
+        else:
+            raise RuntimeError(
+                "Perspective with Id {} exists. Use update_cloudhealth "
+                "instead".format(self.id)
+            )
+
+    def delete(self):
+        # Perspective Names are not reusable for a tenant even if they are
+        # hard deleted. Rename perspective prior to delete to allow the name
+        # to be reused
+        timestamp = datetime.datetime.now()
+        self.name = self.name + str(timestamp)
+        self.update_cloudhealth()
+        delete_params = {'force': True, 'hard_delete': True}
+        response = self._http_client.delete(self._uri, params=delete_params)
+        self._schema = None
+
+    @property
+    def _get_new_ref_id(self):
+        self._new_ref_id += 1
+        return self._new_ref_id
+
+    def _get_ref_id_by_name(self, constant_name, constant_type="Static Group"):
+        constants = [constant for constant in self.constants
+                     if constant['type'] == constant_type]
+        for constant in constants:
+            for item in constant['list']:
+                if item['name'] == constant_name and not item.get('is_other'):
+                    return item['ref_id']
+        # If we get here then no constant with the specified name has been
+        # found.
+        return None
+
+    def get_schema(self):
+        """gets the latest schema from CloudHealth"""
+        response = self._http_client.get(self._uri)
+        self._schema = response['schema']
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, perspective_id):
+        self._id = perspective_id
+        self._uri = self._uri + '/' + perspective_id
+
+    @property
+    def include_in_reports(self):
+        include_in_reports = self.schema['include_in_reports']
+        return include_in_reports
+
+    @include_in_reports.setter
+    def include_in_reports(self, toggle):
+        self._schema['include_in_reports'] = toggle
+
+    @property
+    def merges(self):
+        merges = self.schema['merges']
+        return merges
+
+    @property
+    def name(self):
+        name = self.schema['name']
+        return name
+
+    @name.setter
+    def name(self, new_name):
+        self._schema['name'] = new_name
+
+    @property
+    def rules(self):
+        rules = self.schema['rules']
+        return rules
+
+    @rules.setter
+    def rules(self, rules_list):
+        self._schema['rules'] = rules_list
+
+    @property
+    def schema(self):
+        if not self._schema:
+            self.get_schema()
+
+        return self._schema
+
     def _spec_group_to_schema(self, group):
         group_name = group['Name']
         group_type = group['Type']
@@ -379,8 +379,3 @@ class Perspective:
                 "Perspective Id must be set to update_cloudhealth a "
                 "perspective".format(self.id)
             )
-
-
-
-
-
