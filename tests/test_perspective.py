@@ -16,6 +16,7 @@ def search_spec():
         spec = yaml.load(spec_file)
     return spec
 
+
 @pytest.fixture()
 def group_by_tag_value_spec():
     with open('tests/specs/autogroup.yaml') as spec_file:
