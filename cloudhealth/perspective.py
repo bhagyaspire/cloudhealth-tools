@@ -267,13 +267,28 @@ class Perspective:
 
     def _add_filter_rule(self, asset_type, ref_id, tag_name, tag_values):
         clauses = []
-        for tag_value in tag_values:
-            clause = {
-                "tag_field": [tag_name],
-                "op": "=",
-                "val": tag_value
-            }
-            clauses.append(clause)
+
+        if type(tag_values) is list:
+            for tag_value in tag_values:
+                clause = {
+                    "tag_field": [tag_name],
+                    "op": "=",
+                    "val": tag_value
+                }
+                clauses.append(clause)
+        elif type(tag_values) is bool:
+            if tag_values:
+                clause = {
+                    "tag_field": [tag_name],
+                    "op": "Has A Value"
+                }
+                clauses.append(clause)
+            else:
+                clause = {
+                    "tag_field": [tag_name],
+                    "op": "Is Missing Field"
+                }
+                clauses.append(clause)
 
         condition = {
             "clauses": clauses
@@ -294,7 +309,7 @@ class Perspective:
         group_name = group['Name']
         group_type = group['Type']
         assets = group['Assets']
-        tags = group['Tags']
+        conditions = group['Conditions']
         if group_type == 'Search':
             rule_type = 'filter'
             constant_type = 'Static Group'
@@ -311,9 +326,19 @@ class Perspective:
         ref_id = self._add_constant(group_name, constant_type)
 
         for asset in assets:
-            for tag in tags:
-                self._add_filter_rule(asset, ref_id,
-                                      tag['Name'], tag['Values'])
+            for condition in conditions:
+                if condition['Type'] == 'Tag':
+                    self._add_filter_rule(asset,
+                                          ref_id,
+                                          condition['Name'],
+                                          condition['Values'])
+                else:
+                    raise RuntimeError(
+                        "Unknown condition type {} in group: {}".format(
+                            condition['Type'],
+                            group
+                        )
+                    )
 
     def update_schema(self, schema):
         self._schema = schema
