@@ -2,7 +2,6 @@ import datetime
 from operator import itemgetter
 import logging
 
-import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,9 @@ class PerspectiveClient:
         # instead if returns with a perspective named "Empty" that is empty.
         if perspective.name == 'Empty':
             raise RuntimeError(
-                "Perspective with id {} does not exist.".format(perspective)
+                "Perspective with id {} does not exist.".format(
+                    perspective_input
+                )
             )
         return perspective
 
@@ -78,6 +79,8 @@ class Perspective:
     # i.e. changing the perspectives name requires submitting a full schema
     # with just the name changed.
     def __init__(self, http_client, perspective_id=None, schema=None):
+        # Used to generate ref_id's for new groups.
+        self._new_ref_id = 100
         self._http_client = http_client
         self._uri = 'v1/perspective_schemas'
 
@@ -127,14 +130,7 @@ class Perspective:
             schema = {
                 'name': name,
                 'merges': [],
-                'constants': [{
-                    'list': [{
-                        'name': 'Other',
-                        'ref_id': '1234567890',
-                        'is_other': 'true'
-                    }],
-                    'type': 'Static Group'
-                }],
+                'constants': [],
                 'include_in_reports': 'true',
                 'rules': []
             }
@@ -211,6 +207,11 @@ class Perspective:
         self._schema['name'] = new_name
 
     @property
+    def _get_new_ref_id(self):
+        self._new_ref_id += 1
+        return self._new_ref_id
+
+    @property
     def rules(self):
         rules = self.schema['rules']
         return rules
@@ -226,8 +227,54 @@ class Perspective:
 
         return self._schema
 
+    def _add_constant(self, constant_name, constant_type):
+        # Return current ref_id if constant already exists
+        ref_id = self._get_ref_id_by_name(constant_name,
+                                          constant_type=constant_type)
+        if ref_id:
+            logger.debug(
+                "constant {} {} already exists with ref_id {}".format(
+                    constant_name,
+                    constant_type,
+                    ref_id
+                )
+            )
+        else:
+            for item in self.schema['constants']:
+                if item['type'] == constant_type:
+                    constant = item
+                    break
+                else:
+                    constant = None
+
+            # All perspectives will have a Static Group
+            if constant_type == "Static Group":
+                ref_id = self._get_new_ref_id
+                logger.debug(
+                    "creating constant {} {} with ref_id {}".format(
+                        constant_name,
+                        constant_type,
+                        ref_id
+                    )
+                )
+                new_group = {
+                    "ref_id": ref_id,
+                    "name": constant_name
+                }
+                constant['list'].append(new_group)
+
+        return ref_id
+
+    def _spec_group_to_schema(self, group):
+        pass
+
     def update_schema(self, schema):
         self._schema = schema
+
+    # def update_spec(self, spec):
+    #     for group in spec['Groups']:
+    #         rules, constants = self._spec_group_to_schema(group)
+
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
