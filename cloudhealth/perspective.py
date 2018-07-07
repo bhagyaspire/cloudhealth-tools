@@ -248,7 +248,7 @@ class Perspective:
                     constant = None
 
             # All perspectives will have a Static Group
-            if constant_type == "Static Group":
+            if constant_type == 'Static Group':
                 ref_id = self._get_new_ref_id
                 logger.debug(
                     "creating constant {} {} with ref_id {}".format(
@@ -258,23 +258,72 @@ class Perspective:
                     )
                 )
                 new_group = {
-                    "ref_id": ref_id,
-                    "name": constant_name
+                    'ref_id': ref_id,
+                    'name': constant_name
                 }
                 constant['list'].append(new_group)
 
         return ref_id
 
+    def _add_filter_rule(self, asset_type, ref_id, tag_name, tag_values):
+        clauses = []
+        for tag_value in tag_values:
+            clause = {
+                "tag_field": [tag_name],
+                "op": "=",
+                "val": tag_value
+            }
+            clauses.append(clause)
+
+        condition = {
+            "clauses": clauses
+        }
+        if len(clauses) > 1:
+            condition['combine_with'] = 'OR'
+
+        filter_rule = {
+            "type": "filter",
+            "asset": asset_type,
+            "to": ref_id,
+            "condition": condition
+        }
+
+        self._schema['rules'].append(filter_rule)
+
     def _spec_group_to_schema(self, group):
-        pass
+        group_name = group['Name']
+        group_type = group['Type']
+        assets = group['Assets']
+        tags = group['Tags']
+        if group_type == 'Search':
+            rule_type = 'filter'
+            constant_type = 'Static Group'
+        elif group_type == 'Categorize':
+            rule_type = 'categorize'
+            constant_type = 'Dynamic Group Block'
+        else:
+            raise RuntimeError(
+                "Unknown group type {}".format(group_type)
+            )
+
+        # _add_constant will return ref_id of either newly created group or
+        # of existing group
+        ref_id = self._add_constant(group_name, constant_type)
+
+        for asset in assets:
+            for tag in tags:
+                self._add_filter_rule(asset, ref_id,
+                                      tag['Name'], tag['Values'])
 
     def update_schema(self, schema):
         self._schema = schema
 
-    # def update_spec(self, spec):
-    #     for group in spec['Groups']:
-    #         rules, constants = self._spec_group_to_schema(group)
-
+    def update_spec(self, spec):
+        self.name = spec['Name']
+        if spec.get('Reports'):
+            self.include_in_reports = spec['Reports']
+        for group in spec['Groups']:
+            self._spec_group_to_schema(group)
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
