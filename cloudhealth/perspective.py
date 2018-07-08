@@ -2,6 +2,7 @@ import datetime
 from operator import itemgetter
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +32,15 @@ class PerspectiveClient:
         perspective.create(name)
         return perspective
 
+    def check_exists(self, name, active=None):
+        """Checks if a perspective exists with the same name. Returns bool"""
+        perspectives = self.index(active=active)
+        for perspective_id, perspective_info in perspectives.items():
+            if perspective_info['name'] == name:
+                return True
+        else:
+            return False
+
     def delete(self, perspective_input):
         perspective_id = self._get_perspective_id(perspective_input)
         perspective = Perspective(self._http_client,
@@ -47,7 +57,9 @@ class PerspectiveClient:
         # instead if returns with a perspective named "Empty" that is empty.
         if perspective.name == 'Empty':
             raise RuntimeError(
-                "Perspective with id {} does not exist.".format(perspective)
+                "Perspective with name {} does not exist.".format(
+                    perspective_input
+                )
             )
         return perspective
 
@@ -76,6 +88,8 @@ class Perspective:
     # i.e. changing the perspectives name requires submitting a full schema
     # with just the name changed.
     def __init__(self, http_client, perspective_id=None, schema=None):
+        # Used to generate ref_id's for new groups.
+        self._new_ref_id = 100
         self._http_client = http_client
         self._uri = 'v1/perspective_schemas'
 
@@ -94,6 +108,118 @@ class Perspective:
 
     def __repr__(self):
         return str(self.schema)
+
+    def _add_constant(self, constant_name, constant_type):
+        # Return current ref_id if constant already exists
+        ref_id = self._get_ref_id_by_name(constant_name,
+                                          constant_type=constant_type)
+        if ref_id:
+            logger.debug(
+                "constant {} {} already exists with ref_id {}".format(
+                    constant_name,
+                    constant_type,
+                    ref_id
+                )
+            )
+        # If constant doesn't exist, i.e. ref_id is none, then create constant
+        else:
+            # Look through existing constants for the type we are adding.
+            # There will always be a 'Static Group' constant.
+            for item in self.schema['constants']:
+                if item['type'] == constant_type:
+                    constant = item
+                    break
+                # Create a constant for the type if it doesn't already exist.
+                else:
+                    constant = {
+                                "type": constant_type,
+                                "list": []
+                    }
+                    self.schema['constants'].append(constant)
+
+            ref_id = self._get_new_ref_id
+            logger.debug(
+                "creating constant {} {} with ref_id {}".format(
+                    constant_name,
+                    constant_type,
+                    ref_id
+                )
+            )
+            new_group = {
+                'ref_id': ref_id,
+                'name': constant_name
+            }
+            constant['list'].append(new_group)
+
+            # If Dynamic then the placeholder group for the Dynamic Group
+            # is needed. CloudHealth will put in real values once the schema
+            # is submitted.
+            if constant_type == 'Dynamic Group Block':
+                dynamic_group = {
+                                    "type": "Dynamic Group",
+                                    "list": [{
+                                        "ref_id": "123456",
+                                        "blk_id": ref_id,
+                                        "val": "placeholder",
+                                        "name": "placeholder"
+                                    }]
+                                }
+                self.schema['constants'].append(dynamic_group)
+
+        return ref_id
+
+    def _add_rule(self, rule_type, asset_type, ref_id, tag_name, tag_values):
+        clauses = []
+
+        if rule_type == 'filter':
+            if type(tag_values) is list:
+                for tag_value in tag_values:
+                    clause = {
+                        "tag_field": [tag_name],
+                        "op": "=",
+                        "val": tag_value
+                    }
+                    clauses.append(clause)
+            elif type(tag_values) is bool:
+                if tag_values:
+                    clause = {
+                        "tag_field": [tag_name],
+                        "op": "Has A Value"
+                    }
+                    clauses.append(clause)
+                else:
+                    clause = {
+                        "tag_field": [tag_name],
+                        "op": "Is Missing Field"
+                    }
+                    clauses.append(clause)
+
+            condition = {
+                "clauses": clauses
+            }
+            if len(clauses) > 1:
+                condition['combine_with'] = 'OR'
+
+            rule = {
+                "type": "filter",
+                "asset": asset_type,
+                "to": ref_id,
+                "condition": condition
+            }
+        elif rule_type == 'categorize':
+            rule = {
+                        "type": "categorize",
+                        "asset": asset_type,
+                        "tag_field": [tag_name],
+                        "ref_id": ref_id,
+                        "name": tag_name
+                    }
+        else:
+            raise RuntimeError(
+                "Unknown rule type {}".format(rule_type)
+            )
+
+        self._schema['rules'].append(rule)
 
     @property
     def constants(self):
@@ -126,13 +252,13 @@ class Perspective:
                 'name': name,
                 'merges': [],
                 'constants': [{
-                    'list': [{
-                        'name': 'Other',
-                        'ref_id': '1234567890',
-                        'is_other': 'true'
-                    }],
-                    'type': 'Static Group'
-                }],
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
                 'include_in_reports': 'true',
                 'rules': []
             }
@@ -145,9 +271,8 @@ class Perspective:
             self.get_schema()
         else:
             raise RuntimeError(
-                "Perspective with Id {} exists. Use update_cloudhealth instead".format(
-                    self.id
-                )
+                "Perspective with Id {} exists. Use update_cloudhealth "
+                "instead".format(self.id)
             )
 
     def delete(self):
@@ -159,7 +284,52 @@ class Perspective:
         self.update_cloudhealth()
         delete_params = {'force': True, 'hard_delete': True}
         response = self._http_client.delete(self._uri, params=delete_params)
-        self.schema = None
+        self._schema = None
+
+    @staticmethod
+    def _expand_group_by_tag_value(group):
+        conditions = group['Conditions']
+        if len(conditions) != 1:
+            raise RuntimeError(
+                "GroupByTagValue only supports a single condition. The "
+                "following conditions were specified: {}".format(conditions)
+            )
+        assets = group['Assets']
+        tag_name = conditions[0]['Name']
+        tag_values = conditions[0]['Values']
+        expanded_groups = []
+
+        for tag_value in tag_values:
+            expanded_group = {
+                'Name': tag_value,
+                'Type': 'Search',
+                'Assets': assets,
+                'Conditions': [
+                    {
+                        'Type': 'Tag',
+                        'Name': tag_name,
+                        'Values': [tag_value]
+                    }
+                ]
+            }
+            expanded_groups.append(expanded_group)
+        return expanded_groups
+
+    @property
+    def _get_new_ref_id(self):
+        self._new_ref_id += 1
+        return self._new_ref_id
+
+    def _get_ref_id_by_name(self, constant_name, constant_type="Static Group"):
+        constants = [constant for constant in self.constants
+                     if constant['type'] == constant_type]
+        for constant in constants:
+            for item in constant['list']:
+                if item['name'] == constant_name and not item.get('is_other'):
+                    return item['ref_id']
+        # If we get here then no constant with the specified name has been
+        # found.
+        return None
 
     def get_schema(self):
         """gets the latest schema from CloudHealth"""
@@ -176,6 +346,15 @@ class Perspective:
         self._uri = self._uri + '/' + perspective_id
 
     @property
+    def include_in_reports(self):
+        include_in_reports = self.schema['include_in_reports']
+        return include_in_reports
+
+    @include_in_reports.setter
+    def include_in_reports(self, toggle):
+        self._schema['include_in_reports'] = toggle
+
+    @property
     def merges(self):
         merges = self.schema['merges']
         return merges
@@ -187,7 +366,7 @@ class Perspective:
 
     @name.setter
     def name(self, new_name):
-        self.schema['name'] = new_name
+        self._schema['name'] = new_name
 
     @property
     def rules(self):
@@ -205,9 +384,87 @@ class Perspective:
 
         return self._schema
 
-    @schema.setter
-    def schema(self, schema):
+    def _spec_group_to_schema(self, group):
+        group_name = group['Name']
+        group_type = group['Type']
+        assets = group['Assets']
+        conditions = group['Conditions']
+        if group_type == 'Search':
+            rule_type = 'filter'
+            constant_type = 'Static Group'
+        elif group_type == 'Categorize':
+            rule_type = 'categorize'
+            constant_type = 'Dynamic Group Block'
+
+            # Currently only a single asset and single tag are supported in
+            # Categorize Rules
+            if len(assets) != 1:
+                raise RuntimeError(
+                    "Categorize rules currently only support a single asset "
+                    "type."
+                )
+
+            tag_conditions = [condition for condition in conditions
+                              if condition['Type'] == 'Tag']
+            if len(tag_conditions) != 1:
+                raise RuntimeError(
+                    "Categorize rules currently only support a single tag "
+                    "condition."
+                )
+
+        else:
+            raise RuntimeError(
+                "Unknown group type {}".format(group_type)
+            )
+
+        # _add_constant will return ref_id of either newly created group or
+        # of existing group
+        ref_id = self._add_constant(group_name, constant_type)
+
+        for asset in assets:
+            for condition in conditions:
+                if condition['Type'] == 'Tag':
+                    tag_name = condition['Name']
+                    # Categorize rules don't have tag values
+                    tag_values = condition.get('Values')
+
+                    self._add_rule(rule_type,
+                                   asset,
+                                   ref_id,
+                                   tag_name,
+                                   tag_values)
+                else:
+                    raise RuntimeError(
+                        "Unknown condition type {} in group: {}".format(
+                            condition['Type'],
+                            group
+                        )
+                    )
+
+    def update_schema(self, schema):
         self._schema = schema
+
+    def update_spec(self, spec):
+        logger.debug(
+            "Updated schema using spec: {}".format(spec)
+        )
+        self.name = spec['Name']
+        if spec.get('Reports'):
+            self.include_in_reports = spec['Reports']
+
+        # Remove all existing rules, they will be "over written" by the spec
+        self.rules = []
+
+        for group in spec['Groups']:
+            # If GroupByTagValue then expand groups and add each expanded
+            # group to the schema.
+            if group['Type'] == 'GroupByTagValue':
+                expanded_groups = self._expand_group_by_tag_value(group)
+                for expanded_group in expanded_groups:
+                    self._spec_group_to_schema(expanded_group)
+            else:
+                # If not GroupByTagValue then just add the group to the schema
+                self._spec_group_to_schema(group)
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
@@ -228,8 +485,3 @@ class Perspective:
                 "Perspective Id must be set to update_cloudhealth a "
                 "perspective".format(self.id)
             )
-
-
-
-
-

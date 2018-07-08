@@ -1,50 +1,86 @@
-# CLOUDHEALTH CLIENT
+# CLOUDHEALTH PERSPECTIVE TOOL
 
-This repo contains a python based CloudHealth client along with utilities and scripts to automate tasks within CloudHealth.
+A Python based tool to create and manage CloudHealth perspectives. The tool supports YAML based spec files which can be used to create and update perspectives. Currently only tag based perspectives are supported and not all perspective configurations are supported.
 
-Currently just covers perspectives, but will grow as needed to manage other parts of CloudHealth.
+The CLI utility is named `perspective-tool.py` and the moduels used to interact with CloudHealth can be found in the `cloudhealth` directory.
 
 ## INSTALLATION
 
 client and utilities are written in Python3.
 
-A requirements.txt file has been provided for installation of necessary Python packages.
+A `requirements.txt` file has been provided for installation of necessary Python packages.
 
-## UTILITIES
+A `requirements-dev.txt` file has been provided for installation of necessary Python packages needed for development and testing.
+
+## CONFIGURATION
 
 You will need a CloudHealth API Key to use any of these utilities. You can get your CloudHealth API key by the steps outlined here - https://github.com/CloudHealth/cht_api_guide#getting-an-api-key.
 
-You can set the API Key either via a `CH_API_KEY` environment variable or via a `--ApiKey` argument.
+You can set the API Key either via a `CH_API_KEY` environment variable or via a `--api-key` argument.
 
-### perspective.py
+Details on the YAML spec files used to create and update perspectives are found later in the README.
 
-Utility to create, update and delete perspectives. Currently only supports creating and updating "simple perspectives" that include AWS Assets (both Asset and EmrCluster Asset Types). In this case a simple perspective is where all groups are based off a the same tag value.
+## USAGE
 
-Groups are created based off a list of values stored in a text file. One group name per line. Group names are case sensitive.
+List of CLI arguments can be found via the help. Refer to the actual output of help to ensure latest info.
+```
+usage: perspective-tool.py [-h] [--api-key API_KEY]
+                           [--client-api-id CLIENT_API_ID] [--name NAME]
+                           [--spec-file SPEC_FILE] [--log-level LOG_LEVEL]
+                           {create,update,delete,get-schema}
 
-In addition to groups based off a tag value, a "catch all" group can be created which will include any resource that has the tag, but not a value that maps to another group. This allows for separating resources that are tagged (possibly incorrectly) vs resources that are not tagged (which will show up as "Not Allocated" in reports".
+Create and manage perspectives via YAML spec files. Tool can also be used to
+delete perspective or print a perspective's JSON schema.
+
+positional arguments:
+  {create,update,delete,get-schema}
+                        Perspective action to take.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --api-key API_KEY     CloudHealth API Key. May also be set via the
+                        CH_API_KEY environmental variable.
+  --client-api-id CLIENT_API_ID
+                        CloudHealth client API ID.
+  --name NAME           Name of the perspective to get or delete. Name for
+                        create or update will come from the spec file
+  --spec-file SPEC_FILE
+                        Path to the file containing spec for the perspective.
+  --log-level LOG_LEVEL
+                        Log level sent to the console.
 
 ```
-usage: perspective.py [-h] [--ApiKey APIKEY] [--ClientApiId CLIENTAPIID]
-                      --Name NAME [--Tag TAG] [--GroupsFile GROUPSFILE]
-                      [--CatchAllName CATCHALLNAME] [--LogLevel LOGLEVEL]
-                      {create-simple,update-simple,delete}
-```
 
-By default the name of the tag used to drive the perspective will match the name of the perspective. This can be overridden with the `--Tag` argument.
+**Warning:** Due to a bug in the CloudHealth API groups are unable to be removed from perspectives via the API. Groups that should be deleted via the API will have their associated rules deleted, this will cause them to appear aqua green the Web UI making it easy to identify what should be remove. CleadHealth has acknowledged the bug, but it's unclear when it will be fixed.
 
-Create a new perspective based of the tag "Environment" using a list of group names found in the file environments.txt. Also adds a catch all group called "Non-Conforming"
+## SPEC FILES
+Examples of spec files can be found in `tests/specs`.
 
-```
-./perspective.py create-simple --Name Environment --GroupsFile environments.txt --CatchAllName "Non-Conforming"
-```
+Spec files are in YAML and support the following top-level keys. Required keys are in **bold**.
 
-Updating this perspective with an updated list of groups.
+ * **Name**: Name to set for the perspective.
+ * Reports: Boolean if the perspective should be included in the reports. When creating will default to `True`. When updating will default to what is already set for the perspective.
+ * **Groups**: A list of group mappings. See next section for details.
 
-```
-./perspective.py update-simple --Name Environment --GroupsFile updated-environments.txt --CatchAllName "Non-Conforming"
-```
+### GROUP MAPS
+Perspective groups are represented via YAML mappings. Each group mapping has the following keys with required keys are in **bold**.
 
-Note you need to specify `--CatchAllName` with the update command for it to continue to be a perspective group. Conversely you can remove the catch all group by omitting the `--CatchAllName` argument.
+ * **Type**: Group type, with valid values being: `Search`, `Categorize` or `GroupByTagValue`. `Search` and `Categorize` mirror the Web GUI, while `GroupByTagValue` provides a short hand to build multiple groups. Details on `GroupByTagValue` can be found below in the Values key below.
+ * Name: Name of the group. This is required for all types except `GroupByTagValue`.
+ * **Assets**: A list of CloudHealth Assets to include in the group. Examples include `AwsAsset`, `AwsTaggableAsset` and `AwsEmrCluster`. Note that `Categorize` groups currently only support a single Asset. This is a tool limitation, not a CloudHealth limitation.
+ * **Conditions**: A list of mappings defining the conditions in which the type of Assets should be included in the group.
 
-**Warning:** Due to a bug in the CloudHealth API groups are unable to be removed from perspectives via the API. In the example above any groups not included in the updated-environments.txt file should be deleted, but this is currently not the case. In this case any groups you wish to remove must be deleted via the Web UI. Groups that should be deleted via the API will have their associated rules deleted, this will cause them to appear aqua green the Web UI making it easy to identify what should be remove. This bug is expected to be fixed in early April 2018.
+Condition mappings include the following keys:
+
+ * **Type**: Currently `Tag` is the only supported type, causing the condition to match assets with one or more specified tags.
+ * **Name**: Name of the tag in which will be matched against.
+ * Values: Values is a required key if the group type is `Search` or `GroupByTagValue`. For `Search` Values is either a list of values that should be matched to be included in the group or a boolean, with `True` denoting any Asset with that tag should be included in the group or `False` denoting that any Asset without that tag should not be included. For `GroupByTagValue` Values must be a a list or values that will be used to build perspective groups. With `GroupByTagValue` a separate perspective group will be created for each value included in the list which will include assets matching that list item.
+
+ Note that `Categorize` groups only support a single `Tag` condition. Again this is a limitation of the tool and not CloudHealth.
+
+
+
+
+
+
+
