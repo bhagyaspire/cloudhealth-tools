@@ -439,6 +439,9 @@ class Perspective:
         if spec.get('Reports'):
             self.include_in_reports = spec['Reports']
 
+        # Remove all existing rules, they will be "over written" by the spec
+        self.rules = []
+
         for group in spec['Groups']:
             # If GroupByTagValue then expand groups and add each expanded
             # group to the schema.

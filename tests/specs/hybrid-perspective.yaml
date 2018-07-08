@@ -1,0 +1,25 @@
+Name: HybridPerspective
+Groups:
+  - Name: Conforming
+    Type: Search
+    Assets:
+      - AwsAsset
+      - AwsTaggableAsset
+      - AwsEmrCluster
+    Conditions:
+      - Type: Tag
+        Name: Service
+        Values:
+          - Admin
+          - Web
+          - App
+          - Db
+          - Other
+          - other
+  - Name: Non-Conforming
+    Type: Categorize
+    Assets:
+      - AwsTaggableAsset
+    Conditions:
+      - Type: Tag
+        Name: Service
