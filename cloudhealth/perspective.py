@@ -382,6 +382,23 @@ class Perspective:
         elif group_type == 'Categorize':
             rule_type = 'categorize'
             constant_type = 'Dynamic Group Block'
+
+            # Currently only a single asset and single tag are supported in
+            # Categorize Rules
+            if len(assets) != 1:
+                raise RuntimeError(
+                    "Categorize rules currently only support a single asset "
+                    "type."
+                )
+
+            tag_conditions = [condition for condition in conditions
+                              if condition['Type'] == 'Tag']
+            if len(tag_conditions) != 1:
+                raise RuntimeError(
+                    "Categorize rules currently only support a single tag "
+                    "condition."
+                )
+
         else:
             raise RuntimeError(
                 "Unknown group type {}".format(group_type)
