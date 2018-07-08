@@ -20,7 +20,7 @@ You can set the API Key either via a `CH_API_KEY` environment variable or via a 
 
 Details on the YAML spec files used to create and update perspectives are found later in the README.
 
-### USAGE
+## USAGE
 
 List of CLI arguments can be found via the help. Refer to the actual output of help to ensure latest info.
 ```
@@ -53,17 +53,17 @@ optional arguments:
 
 **Warning:** Due to a bug in the CloudHealth API groups are unable to be removed from perspectives via the API. Groups that should be deleted via the API will have their associated rules deleted, this will cause them to appear aqua green the Web UI making it easy to identify what should be remove. CleadHealth has acknowledged the bug, but it's unclear when it will be fixed.
 
-### SPEC FILES
+## SPEC FILES
 Examples of spec files can be found in `tests/specs`.
 
 Spec files are in YAML and support the following top-level keys. Required keys are in **bold**.
 
  * **Name**: Name to set for the perspective.
- * Reports: Boolean if the perspective should be included in the reports. When creating will default to True. When updating will default to what is already set for the perspective.
+ * Reports: Boolean if the perspective should be included in the reports. When creating will default to `True`. When updating will default to what is already set for the perspective.
  * **Groups**: A list of group mappings. See next section for details.
 
-#### GROUP MAPS
-Perspective groups are represented via YAML mappings. Each group mappings have the following keys, with required keys are in **bold**.
+### GROUP MAPS
+Perspective groups are represented via YAML mappings. Each group mapping has the following keys with required keys are in **bold**.
 
  * **Type**: Group type, with valid values being: `Search`, `Categorize` or `GroupByTagValue`. `Search` and `Categorize` mirror the Web GUI, while `GroupByTagValue` provides a short hand to build multiple groups. Details on `GroupByTagValue` can be found below in the Values key below.
  * Name: Name of the group. This is required for all types except `GroupByTagValue`.
@@ -74,7 +74,7 @@ Condition mappings include the following keys:
 
  * **Type**: Currently `Tag` is the only supported type, causing the condition to match assets with one or more specified tags.
  * **Name**: Name of the tag in which will be matched against.
- * Values: Values is a required key if the group type is `Search` or `GroupByTagValue`. For `Search` Values is either a list of values that should be match to be included in the group or boolean, with `True` denoting any Asset with that tag should be included or `False` denoting that any Asset without that tag should be included. For `GroupByTagValue` Values must be a a list or values that will be used to build perspective groups. With `GroupByTagValue` a separate perspective group will be created for each value included in the list which will include assets matching that list item.
+ * Values: Values is a required key if the group type is `Search` or `GroupByTagValue`. For `Search` Values is either a list of values that should be matched to be included in the group or a boolean, with `True` denoting any Asset with that tag should be included in the group or `False` denoting that any Asset without that tag should not be included. For `GroupByTagValue` Values must be a a list or values that will be used to build perspective groups. With `GroupByTagValue` a separate perspective group will be created for each value included in the list which will include assets matching that list item.
 
  Note that `Categorize` groups only support a single `Tag` condition. Again this is a limitation of the tool and not CloudHealth.
 
