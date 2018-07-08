@@ -11,12 +11,9 @@ from cloudhealth.client import CloudHealth
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Create a simple perspective using a list of group names. "
-                    "List is read from a file and a perspective is created "
-                    "for each line in the file. By default the group name "
-                    "will match a tag with the same value. A catch-all group "
-                    "can also be created, which will match anything with the "
-                    "tag, but does not belong to any other groups."
+        description="Create and manage perspectives via YAML spec files. "
+                    "Tool can also be used to delete perspective or print a "
+                    "perspective's JSON schema. "
     )
 
     parser.add_argument('action',
