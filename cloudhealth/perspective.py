@@ -32,6 +32,15 @@ class PerspectiveClient:
         perspective.create(name)
         return perspective
 
+    def check_exists(self, name, active=None):
+        """Checks if a perspective exists with the same name. Returns bool"""
+        perspectives = self.index(active=active)
+        for perspective_id, perspective_info in perspectives.items():
+            if perspective_info['name'] == name:
+                return True
+        else:
+            return False
+
     def delete(self, perspective_input):
         perspective_id = self._get_perspective_id(perspective_input)
         perspective = Perspective(self._http_client,
@@ -48,7 +57,7 @@ class PerspectiveClient:
         # instead if returns with a perspective named "Empty" that is empty.
         if perspective.name == 'Empty':
             raise RuntimeError(
-                "Perspective with id {} does not exist.".format(
+                "Perspective with name {} does not exist.".format(
                     perspective_input
                 )
             )
