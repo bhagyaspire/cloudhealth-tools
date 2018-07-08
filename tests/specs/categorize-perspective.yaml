@@ -1,0 +1,11 @@
+Name: DynamicOwner
+Groups:
+  - Name: Creator
+    Type: Categorize
+    # Only Single Asset Supported for Categorize
+    Assets:
+      - AwsTaggableAsset
+    # Only Single tag supported for Categorize
+    Conditions:
+      - Type: Tag
+        Name: Creator

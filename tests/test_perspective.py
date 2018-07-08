@@ -25,6 +25,13 @@ def group_by_tag_value_spec():
 
 
 @pytest.fixture()
+def categorize_perspective():
+    with open('tests/specs/categorize-perspective.yaml') as spec_file:
+        spec = yaml.load(spec_file)
+    return spec
+
+
+@pytest.fixture()
 def new_perspective():
     http_client = None
     perspective = Perspective(http_client)
@@ -46,7 +53,7 @@ def new_perspective():
     return perspective
 
 
-def test_search_perspective(new_perspective, search_spec):
+def test_create_search_perspective(new_perspective, search_spec):
     perspective = new_perspective
     perspective.update_spec(search_spec)
 
@@ -193,8 +200,8 @@ def test_search_perspective(new_perspective, search_spec):
     )
 
 
-def test_group_by_tag_value_perspective(new_perspective,
-                                        group_by_tag_value_spec):
+def test_create_group_by_tag_value_perspective(new_perspective,
+                                               group_by_tag_value_spec):
     perspective = new_perspective
     perspective.update_spec(group_by_tag_value_spec)
 
@@ -279,6 +286,39 @@ def test_group_by_tag_value_perspective(new_perspective,
                                                'tag_field': ['Service']}]},
                     'to': 104,
                     'type': 'filter'}]}
+
+    differences = DeepDiff(expected_schema, perspective.schema)
+    assert differences == {}, (
+        "DeepDiff reports the following differences between expected schema "
+        "and generated schema: {}".format(differences)
+    )
+
+
+def test_create_categorize_perspective(new_perspective,
+                                       categorize_perspective):
+    perspective = new_perspective
+    perspective.update_spec(categorize_perspective)
+
+    expected_schema = {
+                        'constants': [{'list': [{'is_other': 'true',
+                                          'name': 'Other',
+                                          'ref_id': '1234567890'}],
+                                'type': 'Static Group'},
+                               {'list': [{'name': 'Creator', 'ref_id': 101}],
+                                'type': 'Dynamic Group Block'},
+                               {'list': [{'blk_id': 101,
+                                          'name': 'placeholder',
+                                          'ref_id': '123456',
+                                          'val': 'placeholder'}],
+                                'type': 'Dynamic Group'}],
+                         'include_in_reports': 'true',
+                         'merges': [],
+                         'name': 'DynamicOwner',
+                         'rules': [{'asset': 'AwsTaggableAsset',
+                                    'name': 'Creator',
+                                    'ref_id': 101,
+                                    'tag_field': ['Creator'],
+                                    'type': 'categorize'}]}
 
     differences = DeepDiff(expected_schema, perspective.schema)
     assert differences == {}, (

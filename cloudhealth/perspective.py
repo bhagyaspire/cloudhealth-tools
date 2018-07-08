@@ -112,71 +112,101 @@ class Perspective:
                     ref_id
                 )
             )
+        # If constant doesn't exist, i.e. ref_id is none, then create constant
         else:
+            # Look through existing constants for the type we are adding.
+            # There will always be a 'Static Group' constant.
             for item in self.schema['constants']:
                 if item['type'] == constant_type:
                     constant = item
                     break
+                # Create a constant for the type if it doesn't already exist.
                 else:
-                    constant = None
+                    constant = {
+                                "type": constant_type,
+                                "list": []
+                    }
+                    self.schema['constants'].append(constant)
 
-            # All perspectives will have a Static Group
-            if constant_type == 'Static Group':
-                ref_id = self._get_new_ref_id
-                logger.debug(
-                    "creating constant {} {} with ref_id {}".format(
-                        constant_name,
-                        constant_type,
-                        ref_id
-                    )
+            ref_id = self._get_new_ref_id
+            logger.debug(
+                "creating constant {} {} with ref_id {}".format(
+                    constant_name,
+                    constant_type,
+                    ref_id
                 )
-                new_group = {
-                    'ref_id': ref_id,
-                    'name': constant_name
-                }
-                constant['list'].append(new_group)
+            )
+            new_group = {
+                'ref_id': ref_id,
+                'name': constant_name
+            }
+            constant['list'].append(new_group)
+
+            # If Dynamic then the placeholder group for the Dynamic Group
+            # is needed. CloudHealth will put in real values once the schema
+            # is submitted.
+            if constant_type == 'Dynamic Group Block':
+                dynamic_group = {
+                                    "type": "Dynamic Group",
+                                    "list": [{
+                                        "ref_id": "123456",
+                                        "blk_id": ref_id,
+                                        "val": "placeholder",
+                                        "name": "placeholder"
+                                    }]
+                                }
+                self.schema['constants'].append(dynamic_group)
 
         return ref_id
 
-    def _add_filter_rule(self, asset_type, ref_id, tag_name, tag_values):
+    def _add_rule(self, rule_type, asset_type, ref_id, tag_name, tag_values):
         clauses = []
 
-        if type(tag_values) is list:
-            for tag_value in tag_values:
-                clause = {
-                    "tag_field": [tag_name],
-                    "op": "=",
-                    "val": tag_value
-                }
-                clauses.append(clause)
-        elif type(tag_values) is bool:
-            if tag_values:
-                clause = {
-                    "tag_field": [tag_name],
-                    "op": "Has A Value"
-                }
-                clauses.append(clause)
-            else:
-                clause = {
-                    "tag_field": [tag_name],
-                    "op": "Is Missing Field"
-                }
-                clauses.append(clause)
+        if rule_type == 'filter':
+            if type(tag_values) is list:
+                for tag_value in tag_values:
+                    clause = {
+                        "tag_field": [tag_name],
+                        "op": "=",
+                        "val": tag_value
+                    }
+                    clauses.append(clause)
+            elif type(tag_values) is bool:
+                if tag_values:
+                    clause = {
+                        "tag_field": [tag_name],
+                        "op": "Has A Value"
+                    }
+                    clauses.append(clause)
+                else:
+                    clause = {
+                        "tag_field": [tag_name],
+                        "op": "Is Missing Field"
+                    }
+                    clauses.append(clause)
 
-        condition = {
-            "clauses": clauses
-        }
-        if len(clauses) > 1:
-            condition['combine_with'] = 'OR'
+            condition = {
+                "clauses": clauses
+            }
+            if len(clauses) > 1:
+                condition['combine_with'] = 'OR'
 
-        filter_rule = {
-            "type": "filter",
-            "asset": asset_type,
-            "to": ref_id,
-            "condition": condition
-        }
+            rule = {
+                "type": "filter",
+                "asset": asset_type,
+                "to": ref_id,
+                "condition": condition
+            }
+        elif rule_type == 'categorize':
+            rule = {
+                        "type": "categorize",
+                        "asset": asset_type,
+                        "tag_field": [tag_name],
+                        "ref_id": ref_id,
+                        "name": tag_name
+                    }
 
-        self._schema['rules'].append(filter_rule)
+        self._schema['rules'].append(rule)
 
     @property
     def constants(self):
@@ -364,10 +394,15 @@ class Perspective:
         for asset in assets:
             for condition in conditions:
                 if condition['Type'] == 'Tag':
-                    self._add_filter_rule(asset,
-                                          ref_id,
-                                          condition['Name'],
-                                          condition['Values'])
+                    tag_name = condition['Name']
+                    # Categorize rules don't have tag values
+                    tag_values = condition.get('Values')
+
+                    self._add_rule(rule_type,
+                                   asset,
+                                   ref_id,
+                                   tag_name,
+                                   tag_values)
                 else:
                     raise RuntimeError(
                         "Unknown condition type {} in group: {}".format(
