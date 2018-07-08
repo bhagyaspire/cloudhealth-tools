@@ -214,6 +214,10 @@ class Perspective:
                         "ref_id": ref_id,
                         "name": tag_name
                     }
+        else:
+            raise RuntimeError(
+                "Unknown rule type {}".format(rule_type)
+            )
 
         self._schema['rules'].append(rule)
 
