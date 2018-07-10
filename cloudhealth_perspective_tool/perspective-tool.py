@@ -6,7 +6,7 @@ import os
 
 import yaml
 
-from cloudhealth.client import CloudHealth
+from cloudhealth_perspective_tool.cloudhealth.client import CloudHealth
 
 
 def parse_args():
