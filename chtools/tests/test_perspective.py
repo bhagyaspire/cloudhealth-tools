@@ -5,7 +5,7 @@ import pytest
 import yaml
 from deepdiff import DeepDiff
 
-from cloudhealth.perspective import Perspective
+from chtools.perspective import Perspective
 
 logger = logging.getLogger('cloudhealth.perspective')
 logger.setLevel(logging.DEBUG)

@@ -3,8 +3,7 @@ import logging
 
 import requests
 
-from cloudhealth_perspective_tool.cloudhealth.perspective import \
-    PerspectiveClient
+from chtools.perspective import PerspectiveClient
 
 logger = logging.getLogger(__name__)
 
