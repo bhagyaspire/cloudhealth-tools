@@ -2,12 +2,6 @@
 
 Python3 library and CLI tools to manage CloudHealth. Currently only includes a tool to create and manage CloudHealth perspectives.
 
-
-
-
-
-The CLI utility is named `perspective-tool.py` and the moduels used to interact with CloudHealth can be found in the `cloudhealth` directory.
-
 ## INSTALLATION
 
 Installation for normal everyday usage is done via `pip`.
@@ -65,7 +59,7 @@ optional arguments:
 #### SPEC FILES
 Examples of spec files can be found in `tests/specs`.
 
-Spec files are in YAML and support the following top-level keys. Required keys are in **bold**.
+Spec files used by `perspective-tool` are in YAML and support the following top-level keys. Required keys are in **bold**.
 
  * **Name**: Name to set for the perspective.
  * Reports: Boolean if the perspective should be included in the reports. When creating will default to `True`. When updating will default to what is already set for the perspective.
