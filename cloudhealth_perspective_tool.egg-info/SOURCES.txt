@@ -1,7 +1,0 @@
-README.md
-cloudhealth_perspective_tool/perspective-tool.py
-cloudhealth_perspective_tool.egg-info/PKG-INFO
-cloudhealth_perspective_tool.egg-info/SOURCES.txt
-cloudhealth_perspective_tool.egg-info/dependency_links.txt
-cloudhealth_perspective_tool.egg-info/requires.txt
-cloudhealth_perspective_tool.egg-info/top_level.txt
