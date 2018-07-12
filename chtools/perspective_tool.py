@@ -1,15 +1,15 @@
-#!/usr/bin/env python3
 import argparse
 import json
 import logging
 import os
+import sys
 
 import yaml
 
-from cloudhealth.client import CloudHealth
+from chtools.lib.client import CloudHealth
 
 
-def parse_args():
+def parse_args(arguments):
     parser = argparse.ArgumentParser(
         description="Create and manage perspectives via YAML spec files. "
                     "Tool can also be used to delete perspective or print a "
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument('--log-level',
                         default='warn',
                         help="Log level sent to the console.")
-    return parser.parse_args()
+    return parser.parse_args(args=arguments)
 
 
 def read_spec_file(file_path):
@@ -46,8 +46,8 @@ def read_spec_file(file_path):
     return spec
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def main(arguments=sys.argv[1:]):
+    args = parse_args(arguments)
     logging_levels = {
         'debug':    logging.DEBUG,
         'info':     logging.INFO,
@@ -118,3 +118,7 @@ if __name__ == "__main__":
     elif args.action == 'get-schema':
         perspective = perspective_client.get(args.name)
         print(json.dumps(perspective.schema, indent=4))
+
+
+if __name__ == "__main__":
+    main()

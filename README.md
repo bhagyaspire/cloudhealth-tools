@@ -1,16 +1,22 @@
-# CLOUDHEALTH PERSPECTIVE TOOL
+# CLOUDHEALTH TOOLS
 
-A Python based tool to create and manage CloudHealth perspectives. The tool supports YAML based spec files which can be used to create and update perspectives. Currently only tag based perspectives are supported and not all perspective configurations are supported.
+Python3 library and CLI tools to manage CloudHealth. Currently only includes a tool to create and manage CloudHealth perspectives.
+
+
+
+
 
 The CLI utility is named `perspective-tool.py` and the moduels used to interact with CloudHealth can be found in the `cloudhealth` directory.
 
 ## INSTALLATION
 
-client and utilities are written in Python3.
+Installation for normal everyday usage is done via `pip`.
 
-A `requirements.txt` file has been provided for installation of necessary Python packages.
+```
+pip install chtools
+```
 
-A `requirements-dev.txt` file has been provided for installation of necessary Python packages needed for development and testing.
+For Development a `requirements-dev.txt` file has been provided for installation of necessary Python packages needed for development and testing.
 
 ## CONFIGURATION
 
@@ -18,13 +24,16 @@ You will need a CloudHealth API Key to use any of these utilities. You can get y
 
 You can set the API Key either via a `CH_API_KEY` environment variable or via a `--api-key` argument.
 
-Details on the YAML spec files used to create and update perspectives are found later in the README.
 
-## USAGE
+## TOOLS
+
+### perspective-tool
+
+The tool supports YAML based spec files which can be used to create and update perspectives. Currently only tag based perspectives are supported and not all perspective configurations are supported. Details on the YAML spec files used to create and update perspectives are found later in the README.
 
 List of CLI arguments can be found via the help. Refer to the actual output of help to ensure latest info.
 ```
-usage: perspective-tool.py [-h] [--api-key API_KEY]
+usage: perspective-tool [-h] [--api-key API_KEY]
                            [--client-api-id CLIENT_API_ID] [--name NAME]
                            [--spec-file SPEC_FILE] [--log-level LOG_LEVEL]
                            {create,update,delete,get-schema}
@@ -53,16 +62,15 @@ optional arguments:
 
 **Warning:** Due to a bug in the CloudHealth API groups are unable to be removed from perspectives via the API. Groups that should be deleted via the API will have their associated rules deleted, this will cause them to appear aqua green the Web UI making it easy to identify what should be remove. CleadHealth has acknowledged the bug, but it's unclear when it will be fixed.
 
-## SPEC FILES
+#### SPEC FILES
 Examples of spec files can be found in `tests/specs`.
 
 Spec files are in YAML and support the following top-level keys. Required keys are in **bold**.
 
  * **Name**: Name to set for the perspective.
  * Reports: Boolean if the perspective should be included in the reports. When creating will default to `True`. When updating will default to what is already set for the perspective.
- * **Groups**: A list of group mappings. See next section for details.
+ * **Groups**: A list of group mappings.
 
-### GROUP MAPS
 Perspective groups are represented via YAML mappings. Each group mapping has the following keys with required keys are in **bold**.
 
  * **Type**: Group type, with valid values being: `Search`, `Categorize` or `GroupByTagValue`. `Search` and `Categorize` mirror the Web GUI, while `GroupByTagValue` provides a short hand to build multiple groups. Details on `GroupByTagValue` can be found below in the Values key below.

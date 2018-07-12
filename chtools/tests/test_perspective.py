@@ -1,32 +1,39 @@
 import logging
+import os
 
-from deepdiff import DeepDiff
 import pytest
 import yaml
+from deepdiff import DeepDiff
 
-from cloudhealth.perspective import Perspective
+from chtools.lib.perspective import Perspective
 
 logger = logging.getLogger('cloudhealth.perspective')
 logger.setLevel(logging.DEBUG)
 
+path = os.path.abspath(__file__)
+dir_path = os.path.dirname(path)
+specs_dir = dir_path + "/specs"
 
 @pytest.fixture()
 def search_spec():
-    with open('tests/specs/search-perspective.yaml') as spec_file:
+    spec_path = specs_dir + "/search-perspective.yaml"
+    with open(spec_path) as spec_file:
         spec = yaml.load(spec_file)
     return spec
 
 
 @pytest.fixture()
 def group_by_tag_value_spec():
-    with open('tests/specs/autogroup.yaml') as spec_file:
+    spec_path = specs_dir + "/autogroup.yaml"
+    with open(spec_path) as spec_file:
         spec = yaml.load(spec_file)
     return spec
 
 
 @pytest.fixture()
 def categorize_perspective():
-    with open('tests/specs/categorize-perspective.yaml') as spec_file:
+    spec_path = specs_dir + "/categorize-perspective.yaml"
+    with open(spec_path) as spec_file:
         spec = yaml.load(spec_file)
     return spec
 

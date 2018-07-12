@@ -1,9 +1,9 @@
 import json
 import logging
 
-from cloudhealth.perspective import PerspectiveClient
-
 import requests
+
+from chtools.lib.perspective import PerspectiveClient
 
 logger = logging.getLogger(__name__)
 

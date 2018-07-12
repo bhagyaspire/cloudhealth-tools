@@ -3,3 +3,5 @@
 scratch/
 **/__pycache__/**
 **/.pytest_cache/**
+dist/
+chtools.egg-info/
