@@ -6,7 +6,7 @@ with open('README.md') as readme_file:
 setup(name='chtools',
       version='0.1',
       description='Automation Tools for CloudHealth',
-      url='https://github.com/bluechiptek/cloudhealth-perspective-tool',
+      url='https://github.com/bluechiptek/cloudhealth-tools',
       author='BlueChipTek',
       author_email='joe@bluechiptek.com',
       long_description_content_type='text/markdown',
