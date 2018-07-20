@@ -45,12 +45,19 @@ class HTTPClient:
                              params=call_params,
                              headers=self._headers,
                              data=post_data)
-        logger.debug(response.json())
+
         if response.status_code != 200:
+            # Sometimes in error conditions valid json is not returned
+            try:
+                response_message = response.json()
+            except json.decoder.JSONDecodeError:
+                response_message = response.text
+
             raise RuntimeError(
                 ('Request to {} failed! HTTP Error Code: {} '
                  'Response: {}').format(
-                    url, response.status_code, response.json()))
+                    url, response.status_code, response_message))
+        logger.debug(response.json())
         return response.json()
 
     def delete(self, uri, params=None):
