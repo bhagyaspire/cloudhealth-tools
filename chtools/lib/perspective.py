@@ -129,13 +129,13 @@ class Perspective:
                 if item['type'] == constant_type:
                     constant = item
                     break
-                # Create a constant for the type if it doesn't already exist.
-                else:
-                    constant = {
-                                "type": constant_type,
-                                "list": []
-                    }
-                    self.schema['constants'].append(constant)
+            # Create a constant for the type if it doesn't already exist.
+            else:
+                constant = {
+                            "type": constant_type,
+                            "list": []
+                }
+                self.schema['constants'].append(constant)
 
             ref_id = self._get_new_ref_id
             logger.debug(
@@ -150,21 +150,6 @@ class Perspective:
                 'name': constant_name
             }
             constant['list'].append(new_group)
-
-            # If Dynamic then the placeholder group for the Dynamic Group
-            # is needed. CloudHealth will put in real values once the schema
-            # is submitted.
-            if constant_type == 'Dynamic Group Block':
-                dynamic_group = {
-                                    "type": "Dynamic Group",
-                                    "list": [{
-                                        "ref_id": "123456",
-                                        "blk_id": ref_id,
-                                        "val": "placeholder",
-                                        "name": "placeholder"
-                                    }]
-                                }
-                self.schema['constants'].append(dynamic_group)
 
         return ref_id
 
@@ -282,7 +267,10 @@ class Perspective:
         timestamp = datetime.datetime.now()
         self.name = self.name + str(timestamp)
         self.update_cloudhealth()
-        delete_params = {'force': True, 'hard_delete': True}
+        # hard_delete can cause CloudHealth to return 500 errors if
+        # perspective schema gets into a strange state delete_params = {
+        # 'force': True, 'hard_delete': True}
+        delete_params = {'force': True}
         response = self._http_client.delete(self._uri, params=delete_params)
         self._schema = None
 
@@ -385,6 +373,9 @@ class Perspective:
         return self._schema
 
     def _spec_group_to_schema(self, group):
+        logger.debug(
+            "Updating schema with spec group: {}".format(group)
+        )
         group_name = group['Name']
         group_type = group['Type']
         assets = group['Assets']
@@ -440,6 +431,7 @@ class Perspective:
                             group
                         )
                     )
+        logger.debug("Schema now looks like: {}".format(self._schema))
 
     def update_schema(self, schema):
         self._schema = schema
@@ -474,7 +466,17 @@ class Perspective:
             perspective_schema = self.schema
 
         if self.id:
-            schema_data = {'schema': perspective_schema}
+            # Dynamic Group constants are created and maintained by
+            # CloudHealth. They should be stripped from the schema prior to
+            # submitting them to the API.
+
+            # create copy of schema dict with and then change copy
+            schema_data = {'schema': dict(perspective_schema)}
+            schema_data['schema']['constants'] = [
+                constant for constant in schema_data['schema']['constants']
+                if constant['type'] != 'Dynamic Group'
+            ]
+
             update_params = {'allow_group_delete': True}
             response = self._http_client.put(self._uri,
                                              schema_data,
