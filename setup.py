@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 with open('README.md') as readme_file:
-      readme = readme_file.read()
+    readme = readme_file.read()
 
 setup(name='chtools',
-      version='1.0.2',
+      version='1.0.3',
       description='Automation Tools for CloudHealth',
       url='https://github.com/bluechiptek/cloudhealth-tools',
       author='BlueChipTek',
