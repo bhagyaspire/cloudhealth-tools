@@ -56,7 +56,7 @@ def main(arguments=sys.argv[1:]):
     }
     log_level = logging_levels[args.log_level.lower()]
 
-    logger = logging.getLogger('cloudhealth')
+    logger = logging.getLogger('chtools')
     logger.setLevel(log_level)
     console_handler = logging.StreamHandler()
     logger.addHandler(console_handler)
