@@ -13,6 +13,7 @@ setup(name='chtools',
       long_description=readme,
       license='GPLv3',
       packages=find_packages(),
+      python_requires='>=3',
       install_requires=[
             'certifi==2018.1.18',
             'chardet==3.0.4',

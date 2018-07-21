@@ -7,7 +7,7 @@ Python3 library and CLI tools to manage CloudHealth. Currently only includes a t
 Installation for normal everyday usage is done via `pip`.
 
 ```
-pip install chtools
+pip3 install chtools
 ```
 
 For Development a `requirements-dev.txt` file has been provided for installation of necessary Python packages needed for development and testing.
