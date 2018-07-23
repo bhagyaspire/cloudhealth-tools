@@ -1,6 +1,6 @@
 Name: DynamicOwner
 Groups:
-  - Name: Creator
+  - Name: Creators
     Type: Categorize
     # Only Single Asset Supported for Categorize
     Assets:
