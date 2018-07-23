@@ -153,7 +153,8 @@ class Perspective:
 
         return ref_id
 
-    def _add_rule(self, rule_type, asset_type, ref_id, tag_name, tag_values):
+    def _add_rule(self, rule_type, asset_type, ref_id, tag_name,
+                  tag_values, rule_name=None):
         clauses = []
 
         if rule_type == 'filter':
@@ -192,12 +193,18 @@ class Perspective:
                 "condition": condition
             }
         elif rule_type == 'categorize':
+            if rule_name is None:
+                logger.warning(
+                    "rule_name not specified for categorize rule going to "
+                    "use the tag name '{}' instead".format(tag_name)
+                )
+                rule_name = tag_name
             rule = {
                         "type": "categorize",
                         "asset": asset_type,
                         "tag_field": [tag_name],
                         "ref_id": ref_id,
-                        "name": tag_name
+                        "name": rule_name
                     }
         else:
             raise RuntimeError(
@@ -423,7 +430,11 @@ class Perspective:
                                    asset,
                                    ref_id,
                                    tag_name,
-                                   tag_values)
+                                   tag_values,
+                                   # technically rule_name is only needed
+                                   # for "categorize" rules, but doesn't
+                                   # hurt to always specify it
+                                   rule_name=group_name)
                 else:
                     raise RuntimeError(
                         "Unknown condition type {} in group: {}".format(
