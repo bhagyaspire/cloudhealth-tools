@@ -1,6 +1,9 @@
+import copy
 import datetime
 from operator import itemgetter
+import json
 import logging
+import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -92,6 +95,10 @@ class Perspective:
         self._new_ref_id = 100
         self._http_client = http_client
         self._uri = 'v1/perspective_schemas'
+        # Schema has includes several lists that can only include a single item
+        # items that match these keys will be converted to/from a single
+        # item list as needed
+        self._single_item_list_keys = ['field', 'tag_field']
 
         if perspective_id:
             # This will set the perspective URL
@@ -109,10 +116,52 @@ class Perspective:
     def __repr__(self):
         return str(self.schema)
 
+    def _spec_from_schema(self):
+        """Spec is never stored, but always generated on the fly based on
+        current schema"""
+        spec_dict = copy.deepcopy(self._schema)
+        for rule in spec_dict['rules']:
+            if rule['type'] == 'filter':
+                rule['to'] = self._get_name_by_ref_id(rule['to'])
+                for clause in rule['condition']['clauses']:
+                    for key, value in clause.items():
+                        if (key in self._single_item_list_keys
+                                and type(value) is list):
+                            if len(value) != 1:
+                                raise RuntimeError(
+                                    "Expected {} in {} to have list "
+                                    "with just 1 item.".format(key, clause)
+                                )
+                            clause[key] = value[0]
+            elif rule['type'] == 'categorize':
+                # categorize schema uses 'ref_id' instead of 'to'
+                # we switch it to 'to' so it's consistent with the filter
+                # rules and makes it easier to understand
+                rule['to'] = self._get_name_by_ref_id(rule['ref_id'])
+                del rule['ref_id']
+                for key, value in rule.items():
+                    if (key in self._single_item_list_keys
+                            and type(value) is list):
+                        if len(value) != 1:
+                            raise RuntimeError(
+                                "Expected {} in {} to have list "
+                                "with just 1 item.".format(key, rule)
+                            )
+                        rule[key] = value[0]
+
+        del spec_dict['merges']
+        del spec_dict['constants']
+        return spec_dict
+
+    @property
+    def spec(self):
+        spec_dict = self._spec_from_schema()
+        spec_yaml = yaml.dump(spec_dict, default_flow_style=False)
+        return spec_yaml
+
     def _add_constant(self, constant_name, constant_type):
         # Return current ref_id if constant already exists
-        ref_id = self._get_ref_id_by_name(constant_name,
-                                          constant_type=constant_type)
+        ref_id = self._get_ref_id_by_name(constant_name)
         if ref_id:
             logger.debug(
                 "constant {} {} already exists with ref_id {}".format(
@@ -152,6 +201,178 @@ class Perspective:
             constant['list'].append(new_group)
 
         return ref_id
+
+    def create(self, name, schema=None):
+        """Creates an empty perspective or one based on a provided schema"""
+        if schema is None:
+            schema = {
+                'name': name,
+                'merges': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
+
+        if not self.id:
+            schema_data = {'schema': schema}
+            response = self._http_client.post(self._uri, schema_data)
+            perspective_id = response['message'].split(" ")[1]
+            self.id = perspective_id
+            self.get_schema()
+        else:
+            raise RuntimeError(
+                "Perspective with Id {} exists. Use update_cloudhealth "
+                "instead".format(self.id)
+            )
+
+    def delete(self):
+        # Perspective Names are not reusable for a tenant even if they are
+        # hard deleted. Rename perspective prior to delete to allow the name
+        # to be reused
+        timestamp = datetime.datetime.now()
+        self.name = self.name + str(timestamp)
+        self.update_cloudhealth()
+        # hard_delete can cause CloudHealth to return 500 errors if
+        # perspective schema gets into a strange state delete_params = {
+        # 'force': True, 'hard_delete': True}
+        delete_params = {'force': True}
+        response = self._http_client.delete(self._uri, params=delete_params)
+        logger.debug(response)
+        self._schema = None
+
+    @property
+    def _get_new_ref_id(self):
+        self._new_ref_id += 1
+        return self._new_ref_id
+
+    def _get_name_by_ref_id(self, ref_id):
+        """Returns the name of a constant (i.e. group) with a specified ref_id
+        """
+        constant_types = ['Static Group', 'Dynamic Group Block']
+        constants = [constant for constant in self.schema['constants']
+                     if constant['type'] in constant_types]
+        for constant in constants:
+            for item in constant['list']:
+                if item['ref_id'] == ref_id and not item.get('is_other'):
+                    return item['name']
+        # If we get here then no constant with the specified name has been
+        # found.
+        return None
+
+    def _get_ref_id_by_name(self, constant_name):
+        """Returns the ref_id of a constant (i.e. group) with a specified name
+
+        None is returned if constant with ref_id doesn't exist. This is used
+        to identify new groups that need to have a new ref_id generated for
+        them.
+        """
+        constant_types = ['Static Group', 'Dynamic Group Block']
+        constants = [constant for constant in self.schema['constants']
+                     if constant['type'] in constant_types]
+        for constant in constants:
+            for item in constant['list']:
+                if item['name'] == constant_name and not item.get('is_other'):
+                    return item['ref_id']
+        # If we get here then no constant with the specified name has been
+        # found.
+        return None
+
+    def get_schema(self):
+        """gets the latest schema from CloudHealth"""
+        response = self._http_client.get(self._uri)
+        self._schema = response['schema']
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, perspective_id):
+        self._id = perspective_id
+        self._uri = self._uri + '/' + perspective_id
+
+    @property
+    def include_in_reports(self):
+        include_in_reports = self.schema['include_in_reports']
+        return include_in_reports
+
+    @include_in_reports.setter
+    def include_in_reports(self, toggle):
+        self._schema['include_in_reports'] = bool(toggle)
+
+    @property
+    def name(self):
+        name = self.schema['name']
+        return name
+
+    @name.setter
+    def name(self, new_name):
+        self._schema['name'] = new_name
+
+    @property
+    def schema(self):
+        if not self._schema:
+            self.get_schema()
+
+        return self._schema
+
+    def update_schema(self, schema):
+        self._schema = schema
+
+    def _schema_from_spec(self, spec):
+        """Updates schema based on passed spec dict"""
+        logger.debug(
+            "Updated schema using spec: {}".format(spec)
+        )
+        self.name = spec['Name']
+        if spec.get('Reports'):
+            self.include_in_reports = spec['Reports']
+        # Remove all existing rules, they will be "over written" by the spec
+        self.schema['rules'] = []
+        for rule in spec['rules']:
+            self._spec_rule_to_schema(rule)
+
+    def _spec_rule_to_schema(self, rule):
+        logger.debug(
+            "Updating schema with spec rule: {}".format(rule)
+        )
+        # Support either 'to' or 'ref_id' as used by categorize rules
+        constant_name = rule['to'] if rule['to'] else rule['ref_id']
+        rule_type = rule['Type'].lower()
+        # Support using 'search' for type as it's called in the Web GUI
+        if rule_type in ['filter', 'search']:
+            rule_type = 'filter'
+            constant_type = 'Static Group'
+            rule_name = None
+        elif rule_type == 'categorize':
+            constant_type = 'Dynamic Group Block'
+            rule_name = rule['name']
+        else:
+            raise RuntimeError(
+                "Unknown rule_type: {}. "
+                "Valid rule_types are: filter, search or categorize"
+            )
+
+        # _add_constant will return ref_id of either newly created group or
+        # of existing group
+        ref_id = self._add_constant(constant_name, constant_type)
+
+        # Covert spec syntactical sugar to valid schema
+        rule['to'] = ref_id
+        if rule_type == 'categorize':
+            rule['ref_id'] = rule['to']
+            del rule['to']
+
+
+
+
 
     def _add_rule(self, rule_type, asset_type, ref_id, tag_name,
                   tag_values, rule_name=None):
@@ -200,12 +421,12 @@ class Perspective:
                 )
                 rule_name = tag_name
             rule = {
-                        "type": "categorize",
-                        "asset": asset_type,
-                        "tag_field": [tag_name],
-                        "ref_id": ref_id,
-                        "name": rule_name
-                    }
+                "type": "categorize",
+                "asset": asset_type,
+                "tag_field": [tag_name],
+                "ref_id": ref_id,
+                "name": rule_name
+            }
         else:
             raise RuntimeError(
                 "Unknown rule type {}".format(rule_type)
@@ -213,261 +434,31 @@ class Perspective:
 
         self._schema['rules'].append(rule)
 
-    @property
-    def constants(self):
-        constants = self.schema['constants']
-        return constants
 
-    @constants.setter
-    def constants(self, constants_list):
-        # Sort list alphabetically
-        # While we sort here, looks like the rules need to be sorted too
-        # Sorting rules is more complicated, so dropping from scope
-        constants_list = sorted(constants_list, key=itemgetter('name'))
-
-        # See if is_other rules is included, if not add it
-        if not any('is_other' in constants
-                   for constants in constants_list):
-            other_rule = {
-                        'name': 'Other',
-                        'ref_id': '1234567890',
-                        'is_other': 'true'
-                    }
-            constants_list.append(other_rule)
-        constants_schema = [{'type': 'Static Group', 'list': constants_list}]
-        self._schema['constants'] = constants_schema
-
-    def create(self, name, schema=None):
-        """Creates an empty perspective or one based on a provided schema"""
-        if schema is None:
-            schema = {
-                'name': name,
-                'merges': [],
-                'constants': [{
-                            'list': [{
-                                'name': 'Other',
-                                'ref_id': '1234567890',
-                                'is_other': 'true'
-                            }],
-                            'type': 'Static Group'
-                        }],
-                'include_in_reports': 'true',
-                'rules': []
-            }
-
-        if not self.id:
-            schema_data = {'schema': schema}
-            response = self._http_client.post(self._uri, schema_data)
-            perspective_id = response['message'].split(" ")[1]
-            self.id = perspective_id
-            self.get_schema()
-        else:
-            raise RuntimeError(
-                "Perspective with Id {} exists. Use update_cloudhealth "
-                "instead".format(self.id)
-            )
-
-    def delete(self):
-        # Perspective Names are not reusable for a tenant even if they are
-        # hard deleted. Rename perspective prior to delete to allow the name
-        # to be reused
-        timestamp = datetime.datetime.now()
-        self.name = self.name + str(timestamp)
-        self.update_cloudhealth()
-        # hard_delete can cause CloudHealth to return 500 errors if
-        # perspective schema gets into a strange state delete_params = {
-        # 'force': True, 'hard_delete': True}
-        delete_params = {'force': True}
-        response = self._http_client.delete(self._uri, params=delete_params)
-        self._schema = None
-
-    @staticmethod
-    def _expand_group_by_tag_value(group):
-        conditions = group['Conditions']
-        if len(conditions) != 1:
-            raise RuntimeError(
-                "GroupByTagValue only supports a single condition. The "
-                "following conditions were specified: {}".format(conditions)
-            )
-        assets = group['Assets']
-        tag_name = conditions[0]['Name']
-        tag_values = conditions[0]['Values']
-        expanded_groups = []
-
-        for tag_value in tag_values:
-            expanded_group = {
-                'Name': tag_value,
-                'Type': 'Search',
-                'Assets': assets,
-                'Conditions': [
-                    {
-                        'Type': 'Tag',
-                        'Name': tag_name,
-                        'Values': [tag_value]
-                    }
-                ]
-            }
-            expanded_groups.append(expanded_group)
-        return expanded_groups
-
-    @property
-    def _get_new_ref_id(self):
-        self._new_ref_id += 1
-        return self._new_ref_id
-
-    def _get_ref_id_by_name(self, constant_name, constant_type="Static Group"):
-        constants = [constant for constant in self.constants
-                     if constant['type'] == constant_type]
-        for constant in constants:
-            for item in constant['list']:
-                if item['name'] == constant_name and not item.get('is_other'):
-                    return item['ref_id']
-        # If we get here then no constant with the specified name has been
-        # found.
-        return None
-
-    def get_schema(self):
-        """gets the latest schema from CloudHealth"""
-        response = self._http_client.get(self._uri)
-        self._schema = response['schema']
-
-    @property
-    def id(self):
-        return self._id
-
-    @id.setter
-    def id(self, perspective_id):
-        self._id = perspective_id
-        self._uri = self._uri + '/' + perspective_id
-
-    @property
-    def include_in_reports(self):
-        include_in_reports = self.schema['include_in_reports']
-        return include_in_reports
-
-    @include_in_reports.setter
-    def include_in_reports(self, toggle):
-        self._schema['include_in_reports'] = toggle
-
-    @property
-    def merges(self):
-        merges = self.schema['merges']
-        return merges
-
-    @property
-    def name(self):
-        name = self.schema['name']
-        return name
-
-    @name.setter
-    def name(self, new_name):
-        self._schema['name'] = new_name
-
-    @property
-    def rules(self):
-        rules = self.schema['rules']
-        return rules
-
-    @rules.setter
-    def rules(self, rules_list):
-        self._schema['rules'] = rules_list
-
-    @property
-    def schema(self):
-        if not self._schema:
-            self.get_schema()
-
-        return self._schema
-
-    def _spec_group_to_schema(self, group):
-        logger.debug(
-            "Updating schema with spec group: {}".format(group)
-        )
-        group_name = group['Name']
-        group_type = group['Type']
-        assets = group['Assets']
-        conditions = group['Conditions']
-        if group_type == 'Search':
-            rule_type = 'filter'
-            constant_type = 'Static Group'
-        elif group_type == 'Categorize':
-            rule_type = 'categorize'
-            constant_type = 'Dynamic Group Block'
-
-            # Currently only a single asset and single tag are supported in
-            # Categorize Rules
-            if len(assets) != 1:
-                raise RuntimeError(
-                    "Categorize rules currently only support a single asset "
-                    "type."
-                )
-
-            tag_conditions = [condition for condition in conditions
-                              if condition['Type'] == 'Tag']
-            if len(tag_conditions) != 1:
-                raise RuntimeError(
-                    "Categorize rules currently only support a single tag "
-                    "condition."
-                )
-
-        else:
-            raise RuntimeError(
-                "Unknown group type {}".format(group_type)
-            )
-
-        # _add_constant will return ref_id of either newly created group or
-        # of existing group
-        ref_id = self._add_constant(group_name, constant_type)
-
-        for asset in assets:
-            for condition in conditions:
-                if condition['Type'] == 'Tag':
-                    tag_name = condition['Name']
-                    # Categorize rules don't have tag values
-                    tag_values = condition.get('Values')
-
-                    self._add_rule(rule_type,
-                                   asset,
-                                   ref_id,
-                                   tag_name,
-                                   tag_values,
-                                   # technically rule_name is only needed
-                                   # for "categorize" rules, but doesn't
-                                   # hurt to always specify it
-                                   rule_name=group_name)
-                else:
-                    raise RuntimeError(
-                        "Unknown condition type {} in group: {}".format(
-                            condition['Type'],
-                            group
-                        )
-                    )
-        logger.debug("Schema now looks like: {}".format(self._schema))
-
-    def update_schema(self, schema):
-        self._schema = schema
-
-    def update_spec(self, spec):
-        logger.debug(
-            "Updated schema using spec: {}".format(spec)
-        )
-        self.name = spec['Name']
-        if spec.get('Reports'):
-            self.include_in_reports = spec['Reports']
-
-        # Remove all existing rules, they will be "over written" by the spec
-        self.rules = []
-
-        for group in spec['Groups']:
-            # If GroupByTagValue then expand groups and add each expanded
-            # group to the schema.
-            if group['Type'] == 'GroupByTagValue':
-                expanded_groups = self._expand_group_by_tag_value(group)
-                for expanded_group in expanded_groups:
-                    self._spec_group_to_schema(expanded_group)
-            else:
-                # If not GroupByTagValue then just add the group to the schema
-                self._spec_group_to_schema(group)
+        # for asset in assets:
+        #     for condition in conditions:
+        #         if condition['Type'] == 'Tag':
+        #             tag_name = condition['Name']
+        #             # Categorize rules don't have tag values
+        #             tag_values = condition.get('Values')
+        #
+        #             self._add_rule(rule_type,
+        #                            asset,
+        #                            ref_id,
+        #                            tag_name,
+        #                            tag_values,
+        #                            # technically rule_name is only needed
+        #                            # for "categorize" rules, but doesn't
+        #                            # hurt to always specify it
+        #                            rule_name=constant_name)
+        #         else:
+        #             raise RuntimeError(
+        #                 "Unknown condition type {} in group: {}".format(
+        #                     condition['Type'],
+        #                     rule
+        #                 )
+        #             )
+        # logger.debug("Schema now looks like: {}".format(self._schema))
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
