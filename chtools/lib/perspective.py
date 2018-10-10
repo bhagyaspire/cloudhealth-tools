@@ -121,8 +121,25 @@ class Perspective:
         current schema"""
         spec_dict = copy.deepcopy(self._schema)
         for rule in spec_dict['rules']:
-            if rule['type'] == 'filter':
-                rule['to'] = self._get_name_by_ref_id(rule['to'])
+            # categorize schema uses 'ref_id' instead of 'to'
+            # we switch it to 'to' so it's consistent with the filter
+            # rules and makes it easier to understand
+            if rule.get('ref_id'):
+                rule['to'] = rule['ref_id']
+                del rule['ref_id']
+            rule['to'] = self._get_name_by_ref_id(rule['to'])
+            # categorize don't have conditions and or nested dicts
+            for key, value in rule.items():
+                if (key in self._single_item_list_keys
+                        and type(value) is list):
+                    if len(value) != 1:
+                        raise RuntimeError(
+                            "Expected {} in {} to have list "
+                            "with just 1 item.".format(key, rule)
+                        )
+                    rule[key] = value[0]
+            # filter rules have conditions that need to checked
+            if rule.get('condition'):
                 for clause in rule['condition']['clauses']:
                     for key, value in clause.items():
                         if (key in self._single_item_list_keys
@@ -133,21 +150,6 @@ class Perspective:
                                     "with just 1 item.".format(key, clause)
                                 )
                             clause[key] = value[0]
-            elif rule['type'] == 'categorize':
-                # categorize schema uses 'ref_id' instead of 'to'
-                # we switch it to 'to' so it's consistent with the filter
-                # rules and makes it easier to understand
-                rule['to'] = self._get_name_by_ref_id(rule['ref_id'])
-                del rule['ref_id']
-                for key, value in rule.items():
-                    if (key in self._single_item_list_keys
-                            and type(value) is list):
-                        if len(value) != 1:
-                            raise RuntimeError(
-                                "Expected {} in {} to have list "
-                                "with just 1 item.".format(key, rule)
-                            )
-                        rule[key] = value[0]
 
         del spec_dict['merges']
         del spec_dict['constants']
@@ -158,6 +160,20 @@ class Perspective:
         spec_dict = self._spec_from_schema()
         spec_yaml = yaml.dump(spec_dict, default_flow_style=False)
         return spec_yaml
+
+    @spec.setter
+    def spec(self, spec_input):
+        """Updates schema based on passed spec dict"""
+        logger.debug(
+            "Updated schema using spec: {}".format(spec_input)
+        )
+        self.name = spec_input['name']
+        if spec_input.get('include_in_reports'):
+            self.include_in_reports = spec_input['include_in_reports']
+        # Remove all existing rules, they will be "over written" by the spec
+        self.schema['rules'] = []
+        for rule in spec_input['rules']:
+            self._spec_rule_to_schema(rule)
 
     def _add_constant(self, constant_name, constant_type):
         # Return current ref_id if constant already exists
@@ -250,7 +266,7 @@ class Perspective:
     @property
     def _get_new_ref_id(self):
         self._new_ref_id += 1
-        return self._new_ref_id
+        return str(self._new_ref_id)
 
     def _get_name_by_ref_id(self, ref_id):
         """Returns the name of a constant (i.e. group) with a specified ref_id
@@ -305,7 +321,7 @@ class Perspective:
 
     @include_in_reports.setter
     def include_in_reports(self, toggle):
-        self._schema['include_in_reports'] = bool(toggle)
+        self._schema['include_in_reports'] = str(bool(toggle)).lower()
 
     @property
     def name(self):
@@ -345,15 +361,13 @@ class Perspective:
         )
         # Support either 'to' or 'ref_id' as used by categorize rules
         constant_name = rule['to'] if rule['to'] else rule['ref_id']
-        rule_type = rule['Type'].lower()
+        rule_type = rule['type'].lower()
         # Support using 'search' for type as it's called in the Web GUI
         if rule_type in ['filter', 'search']:
-            rule_type = 'filter'
+            rule['type'] = 'filter'
             constant_type = 'Static Group'
-            rule_name = None
         elif rule_type == 'categorize':
             constant_type = 'Dynamic Group Block'
-            rule_name = rule['name']
         else:
             raise RuntimeError(
                 "Unknown rule_type: {}. "
@@ -370,95 +384,22 @@ class Perspective:
             rule['ref_id'] = rule['to']
             del rule['to']
 
+        # Convert to single item lists where needed
+        # categorize don't have conditions and or nested dicts
+        for key, value in rule.items():
+            if key in self._single_item_list_keys:
+                rule[key] = [value]
+        # filter rules have conditions that need to checked
+        if rule.get('condition'):
+            for clause in rule['condition']['clauses']:
+                for key, value in clause.items():
+                    if key in self._single_item_list_keys:
+                        clause[key] = [value]
+        self._add_rule(rule)
 
-
-
-
-    def _add_rule(self, rule_type, asset_type, ref_id, tag_name,
-                  tag_values, rule_name=None):
-        clauses = []
-
-        if rule_type == 'filter':
-            if type(tag_values) is list:
-                for tag_value in tag_values:
-                    clause = {
-                        "tag_field": [tag_name],
-                        "op": "=",
-                        "val": tag_value
-                    }
-                    clauses.append(clause)
-            elif type(tag_values) is bool:
-                if tag_values:
-                    clause = {
-                        "tag_field": [tag_name],
-                        "op": "Has A Value"
-                    }
-                    clauses.append(clause)
-                else:
-                    clause = {
-                        "tag_field": [tag_name],
-                        "op": "Is Missing Field"
-                    }
-                    clauses.append(clause)
-
-            condition = {
-                "clauses": clauses
-            }
-            if len(clauses) > 1:
-                condition['combine_with'] = 'OR'
-
-            rule = {
-                "type": "filter",
-                "asset": asset_type,
-                "to": ref_id,
-                "condition": condition
-            }
-        elif rule_type == 'categorize':
-            if rule_name is None:
-                logger.warning(
-                    "rule_name not specified for categorize rule going to "
-                    "use the tag name '{}' instead".format(tag_name)
-                )
-                rule_name = tag_name
-            rule = {
-                "type": "categorize",
-                "asset": asset_type,
-                "tag_field": [tag_name],
-                "ref_id": ref_id,
-                "name": rule_name
-            }
-        else:
-            raise RuntimeError(
-                "Unknown rule type {}".format(rule_type)
-            )
-
-        self._schema['rules'].append(rule)
-
-
-        # for asset in assets:
-        #     for condition in conditions:
-        #         if condition['Type'] == 'Tag':
-        #             tag_name = condition['Name']
-        #             # Categorize rules don't have tag values
-        #             tag_values = condition.get('Values')
-        #
-        #             self._add_rule(rule_type,
-        #                            asset,
-        #                            ref_id,
-        #                            tag_name,
-        #                            tag_values,
-        #                            # technically rule_name is only needed
-        #                            # for "categorize" rules, but doesn't
-        #                            # hurt to always specify it
-        #                            rule_name=constant_name)
-        #         else:
-        #             raise RuntimeError(
-        #                 "Unknown condition type {} in group: {}".format(
-        #                     condition['Type'],
-        #                     rule
-        #                 )
-        #             )
-        # logger.debug("Schema now looks like: {}".format(self._schema))
+    def _add_rule(self, rule_definition):
+        logger.debug("Adding Rule: {}".format(rule_definition))
+        self._schema['rules'].append(rule_definition)
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
@@ -480,6 +421,7 @@ class Perspective:
             ]
 
             update_params = {'allow_group_delete': True}
+
             response = self._http_client.put(self._uri,
                                              schema_data,
                                              params=update_params)
