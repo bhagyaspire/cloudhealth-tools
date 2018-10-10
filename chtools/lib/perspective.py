@@ -132,6 +132,7 @@ class Perspective:
         if perspective_id:
             # This will set the perspective URL
             self.id = perspective_id
+            self.get_schema()
         else:
             # This will skip setting the perspective URL,
             # as None isn't part of a valid URL

@@ -21,6 +21,7 @@ def parse_args(arguments):
                         choices=[
                             'create',
                             'delete',
+                            'empty-archive',
                             'get-schema',
                             'get-spec',
                             'list',
@@ -110,7 +111,7 @@ def main(arguments=sys.argv[1:]):
                 "--spec-file or --schema-file option must be set for "
                 "create or update"
             )
-    elif args.action in ['list']:
+    elif args.action in ['list', 'empty-archive']:
         # No --name needed for these actions
         pass
     else:
@@ -157,6 +158,10 @@ def main(arguments=sys.argv[1:]):
     elif args.action == 'get-spec':
         perspective = perspective_client.get(perspective_name)
         print(perspective.spec)
+    elif args.action == 'empty-archive':
+        index = perspective_client.index(active=False)
+        for perspective_id in index.keys():
+            perspective_client.delete(perspective_id)
     elif args.action == 'list':
         perspective_list = [('NAME', 'ID', 'ACTIVE'),
                             ('-----', '-----', '-----')]
