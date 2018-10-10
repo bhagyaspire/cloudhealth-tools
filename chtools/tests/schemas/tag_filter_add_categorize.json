@@ -1,5 +1,5 @@
 {
-  "name": "tag_filter",
+  "name": "tag_filter_add_categorize",
   "merges": [],
   "constants": [
     {
@@ -23,6 +23,15 @@
         }
       ],
       "type": "Static Group"
+    },
+    {
+      "type": "Dynamic Group Block",
+      "list": [
+        {
+          "ref_id": "104",
+          "name": "Envs"
+        }
+      ]
     }
   ],
   "include_in_reports": "true",
@@ -74,6 +83,15 @@
           }
         ]
       }
+    },
+    {
+      "type": "categorize",
+      "asset": "AwsAsset",
+      "tag_field": [
+        "Env"
+      ],
+      "name": "Envs",
+      "ref_id": "104"
     }
   ]
 }

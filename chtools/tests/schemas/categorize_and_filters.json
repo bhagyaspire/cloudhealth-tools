@@ -1,1 +1,65 @@
-{"name": "categorize_and_filters", "merges": [], "constants": [{"list": [{"name": "Other", "ref_id": "1234567890", "is_other": "true"}, {"ref_id": "101", "name": "BctOwners"}], "type": "Static Group"}, {"type": "Dynamic Group Block", "list": [{"ref_id": "102", "name": "NonBctOwners"}]}], "include_in_reports": "true", "rules": [{"type": "filter", "asset": "AwsAsset", "to": "101", "condition": {"combine_with": "OR", "clauses": [{"tag_field": ["Creator"], "op": "=", "val": "joe"}, {"tag_field": ["Creator"], "op": "=", "val": "colin"}]}}, {"type": "categorize", "asset": "AwsAsset", "tag_field": ["Creator"], "name": "Creator", "ref_id": "102"}]}
+{
+  "name": "categorize_and_filters",
+  "merges": [],
+  "constants": [
+    {
+      "list": [
+        {
+          "name": "Other",
+          "ref_id": "1234567890",
+          "is_other": "true"
+        },
+        {
+          "ref_id": "101",
+          "name": "BctOwners"
+        }
+      ],
+      "type": "Static Group"
+    },
+    {
+      "type": "Dynamic Group Block",
+      "list": [
+        {
+          "ref_id": "102",
+          "name": "NonBctOwners"
+        }
+      ]
+    }
+  ],
+  "include_in_reports": "true",
+  "rules": [
+    {
+      "type": "filter",
+      "asset": "AwsAsset",
+      "to": "101",
+      "condition": {
+        "combine_with": "OR",
+        "clauses": [
+          {
+            "tag_field": [
+              "Creator"
+            ],
+            "op": "=",
+            "val": "joe"
+          },
+          {
+            "tag_field": [
+              "Creator"
+            ],
+            "op": "=",
+            "val": "colin"
+          }
+        ]
+      }
+    },
+    {
+      "type": "categorize",
+      "asset": "AwsAsset",
+      "tag_field": [
+        "Creator"
+      ],
+      "name": "Creator",
+      "ref_id": "102"
+    }
+  ]
+}

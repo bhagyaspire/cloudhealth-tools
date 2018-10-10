@@ -76,3 +76,43 @@ def test_schema_to_spec(test_case):
         "DeepDiff reports the following differences between expected schema "
         "and generated schema: {}".format(differences)
     )
+
+
+def test_update_filter_via_spec():
+    perspective = Perspective(http_client=None)
+    initial_schema_path = '{}/tag_filter.json'.format(schemas_dir)
+    with open(initial_schema_path) as initial_schema_path:
+        perspective.schema = json.load(initial_schema_path)
+    update_spec_path = '{}/tag_filter_update.yaml'.format(specs_dir)
+    with open(update_spec_path) as update_spec_file:
+        perspective.spec = yaml.load(update_spec_file)
+    expected_schema_path = '{}/tag_filter_update.json'.format(schemas_dir)
+    with open(expected_schema_path) as expected_schema_file:
+        expected_schema = json.load(expected_schema_file)
+
+    differences = DeepDiff(expected_schema, perspective.schema)
+    assert differences == {}, (
+        "DeepDiff reports the following differences between expected schema "
+        "and generated schema: {}".format(differences)
+    )
+
+
+def test_add_categorize_via_spec():
+    perspective = Perspective(http_client=None)
+    initial_schema_path = '{}/tag_filter.json'.format(schemas_dir)
+    with open(initial_schema_path) as initial_schema_path:
+        perspective.schema = json.load(initial_schema_path)
+    update_spec_path = '{}/tag_filter_add_categorize.yaml'.format(specs_dir)
+    with open(update_spec_path) as update_spec_file:
+        perspective.spec = yaml.load(update_spec_file)
+    expected_schema_path = '{}/tag_filter_add_categorize.json'.format(
+        schemas_dir
+    )
+    with open(expected_schema_path) as expected_schema_file:
+        expected_schema = json.load(expected_schema_file)
+
+    differences = DeepDiff(expected_schema, perspective.schema)
+    assert differences == {}, (
+        "DeepDiff reports the following differences between expected schema "
+        "and generated schema: {}".format(differences)
+    )

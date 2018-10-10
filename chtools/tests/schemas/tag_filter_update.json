@@ -1,5 +1,5 @@
 {
-  "name": "tag_filter",
+  "name": "tag_filter_update",
   "merges": [],
   "constants": [
     {
@@ -20,6 +20,10 @@
         {
           "ref_id": "103",
           "name": "Prod"
+        },
+        {
+          "ref_id": "104",
+          "name": "DR"
         }
       ],
       "type": "Static Group"
@@ -32,6 +36,7 @@
       "to": "101",
       "asset": "AwsAsset",
       "condition": {
+        "combine_with": "OR",
         "clauses": [
           {
             "op": "=",
@@ -39,6 +44,13 @@
               "Env"
             ],
             "val": "Dev"
+          },
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "Test"
           }
         ]
       }
@@ -71,6 +83,22 @@
               "Env"
             ],
             "val": "Prod"
+          }
+        ]
+      }
+    },
+    {
+      "type": "filter",
+      "to": "104",
+      "asset": "AwsAsset",
+      "condition": {
+        "clauses": [
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "DR"
           }
         ]
       }

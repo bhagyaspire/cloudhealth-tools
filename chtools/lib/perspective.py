@@ -262,7 +262,22 @@ class Perspective:
 
     @property
     def _get_new_ref_id(self):
-        self._new_ref_id += 1
+        """Generates new ref_ids that are not in the current schema"""
+        while True:
+            self._new_ref_id += 1
+            # Check to make sure ref_id isn't already used in schema
+            # If so go to next id
+            constants = self.schema['constants']
+            existing_ref_ids = []
+            # These are the types of constant that have ref_ids we care about
+            constant_types = ['Static Group', 'Dynamic Group Block']
+            for constant in constants:
+                if constant['type'] in constant_types:
+                    ref_ids = [item['ref_id'] for item in constant['list']]
+                    existing_ref_ids.extend(ref_ids)
+            if str(self._new_ref_id) not in existing_ref_ids:
+                break
+
         return str(self._new_ref_id)
 
     def _get_name_by_ref_id(self, ref_id):
