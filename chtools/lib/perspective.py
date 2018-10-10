@@ -3,6 +3,7 @@ import datetime
 import logging
 import yaml
 
+from deepdiff import DeepDiff
 
 logger = logging.getLogger(__name__)
 
@@ -225,8 +226,7 @@ class Perspective:
         if schema:
             self._schema = schema
         elif spec:
-            # _schema_from_spec updates self._schema
-            self._schema_from_spec(spec)
+            self.spec = spec
         else:
             # Just set name for existing empty schema
             self.name = perspective_name
@@ -354,19 +354,6 @@ class Perspective:
     def schema(self, schema_input):
         self._schema = schema_input
 
-    def _schema_from_spec(self, spec):
-        """Updates schema based on passed spec dict"""
-        logger.debug(
-            "Updated schema using spec: {}".format(spec)
-        )
-        self.name = spec['name']
-        if spec.get('include_in_reports'):
-            self.include_in_reports = spec['include_in_reports']
-        # Remove all existing rules, they will be "over written" by the spec
-        self.schema['rules'] = []
-        for rule in spec['rules']:
-            self._spec_rule_to_schema(rule)
-
     def _spec_from_schema(self):
         """Spec is never stored, but always generated on the fly based on
         current schema"""
@@ -402,6 +389,42 @@ class Perspective:
                                 )
                             clause[key] = value[0]
 
+        # Combine rules that only differ by asset into a single rule
+        # asset key will include a list of assets from each rule that was
+        # combined
+        #
+        # This is a little tricky since we want to modify a list we also
+        # want to iterate over.
+        combined_rules = []
+        rules = spec_dict['rules']
+        # We make a copy of the list of rules
+        for current_rule in list(rules):
+            # For each rule from the copy we check to see if it is still in
+            # the list of rules. If it is that means it hasn't been combined
+            # yet and we will look to see if we can combine it with other rules
+            # If we combine rules we removed them from the rules list.
+            if current_rule in rules:
+                # We remove the current rule we are evaluating,
+                # so its not evaluated again
+                rules.remove(current_rule)
+                asset_types = [current_rule['asset']]
+                # Make a copy of the remaining rules so we can iterate over it
+                for rule in list(rules):
+                    rule_diff = DeepDiff(current_rule, rule)
+                    # If the only think that is different is "root['asset']"
+                    # Then we can combine
+                    values_changed = rule_diff.get('values_changed')
+                    if (values_changed
+                            and len(rule_diff.keys()) == 1
+                            and len(values_changed.keys()) == 1
+                            and values_changed.get("root['asset']")):
+                        asset_types.append(rule['asset'])
+                        rules.remove(rule)
+                if len(asset_types) > 1:
+                    current_rule['asset'] = asset_types
+                combined_rules.append(current_rule)
+
+        spec_dict['rules'] = combined_rules
         del spec_dict['merges']
         del spec_dict['constants']
         return spec_dict
@@ -467,7 +490,18 @@ class Perspective:
         # Remove all existing rules, they will be "over written" by the spec
         self.schema['rules'] = []
         for rule in spec_input['rules']:
-            self._spec_rule_to_schema(rule)
+            # Expand rule that contains multiple assets into multiple rules
+            if type(rule['asset']) is list:
+                logger.debug(
+                    "rule asset includes a list {}. "
+                    "Expanding into multiple rules.".format(rule['asset'])
+                )
+                for asset_type in rule['asset']:
+                    new_rule = copy.deepcopy(rule)
+                    new_rule['asset'] = asset_type
+                    self._spec_rule_to_schema(new_rule)
+            else:
+                self._spec_rule_to_schema(rule)
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""

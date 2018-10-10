@@ -22,7 +22,8 @@ test_cases = [
         'tag_active',
         'multiple_rules_to_a_group',
         'categorize',
-        'categorize_and_filters'
+        'categorize_and_filters',
+        'tag_filter_multiple_assets'
     ]
 
 

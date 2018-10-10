@@ -15,6 +15,7 @@ setup(name='chtools',
       packages=find_packages(),
       python_requires='>=3',
       install_requires=[
+            'deepdiff==3.3.0',
             'certifi==2018.1.18',
             'chardet==3.0.4',
             'idna==2.6',
