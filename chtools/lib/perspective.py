@@ -332,7 +332,7 @@ class Perspective:
 
     @include_in_reports.setter
     def include_in_reports(self, toggle):
-        self._schema['include_in_reports'] = str(bool(toggle)).lower()
+        self._schema['include_in_reports'] = toggle
 
     @property
     def name(self):
