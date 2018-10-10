@@ -1,7 +1,5 @@
 import copy
 import datetime
-from operator import itemgetter
-import json
 import logging
 import yaml
 
