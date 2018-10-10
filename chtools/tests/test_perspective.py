@@ -17,8 +17,12 @@ specs_dir = dir_path + "/specs"
 schemas_dir = dir_path + "/schemas"
 
 test_cases = [
-        'basic_tag_filter',
-        'basic_tag_search'
+        'tag_filter',
+        'tag_search',
+        'tag_active',
+        'multiple_rules_to_a_group',
+        'categorize',
+        'categorize_and_filters'
     ]
 
 

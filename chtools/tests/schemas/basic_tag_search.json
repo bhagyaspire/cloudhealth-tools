@@ -1,1 +1,0 @@
-{"name": "basic_tag_search", "merges": [], "constants": [{"list": [{"name": "Other", "ref_id": "1234567890", "is_other": "true"}, {"ref_id": "101", "name": "Dev"}], "type": "Static Group"}], "include_in_reports": "true", "rules": [{"type": "filter", "to": "101", "asset": "AwsAsset", "condition": {"clauses": [{"op": "=", "tag_field": ["Env"], "val": "Dev"}]}}]}

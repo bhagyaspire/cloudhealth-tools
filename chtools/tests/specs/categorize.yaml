@@ -1,0 +1,8 @@
+name: categorize
+include_in_reports: 'true'
+rules:
+- type: categorize
+  asset: AwsAsset
+  tag_field: Creator
+  to: Owner
+  name: Owner

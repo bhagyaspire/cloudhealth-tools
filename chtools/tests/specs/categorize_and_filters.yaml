@@ -1,0 +1,20 @@
+name: categorize_and_filters
+include_in_reports: 'true'
+rules:
+- type: filter
+  asset: AwsAsset
+  to: BctOwners
+  condition:
+    combine_with: OR
+    clauses:
+    - tag_field: Creator
+      op: "="
+      val: joe
+    - tag_field: Creator
+      op: "="
+      val: colin
+- type: categorize
+  asset: AwsAsset
+  tag_field: Creator
+  to: NonBctOwners
+  name: Creator

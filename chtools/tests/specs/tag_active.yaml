@@ -1,0 +1,15 @@
+name: tag_active
+include_in_reports: 'true'
+rules:
+- type: filter
+  asset: AwsTaggableAsset
+  to: tag_active
+  condition:
+    combine_with: AND
+    clauses:
+    - field: Active
+      op: "="
+      val: 'true'
+    - tag_field: Owner
+      op: "="
+      val: Colin
