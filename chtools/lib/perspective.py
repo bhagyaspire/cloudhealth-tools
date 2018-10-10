@@ -29,10 +29,19 @@ class PerspectiveClient:
                 if perspective_info['name'] == perspective_input:
                     return perspective_id
 
-    def create(self, name):
-        """Creates perspective. Schema will be 'empty'. """
-        perspective = Perspective(self._http_client)
-        perspective.create(name)
+    def create(self, perspective_name, schema=None, spec=None):
+        """Creates perspective. By default schema will be 'empty'. """
+        if not self.check_exists(perspective_name):
+            perspective = Perspective(self._http_client)
+            perspective.create(perspective_name,
+                               schema=schema,
+                               spec=spec)
+        else:
+            raise RuntimeError(
+                "Perspective with name {} already exists.".format(
+                    perspective_name
+                )
+            )
         return perspective
 
     def check_exists(self, name, active=None):
@@ -45,13 +54,20 @@ class PerspectiveClient:
             return False
 
     def delete(self, perspective_input):
+        """Deletes perspective
+
+        perspective_input can be name or id
+        """
         perspective_id = self._get_perspective_id(perspective_input)
         perspective = Perspective(self._http_client,
                                   perspective_id=str(perspective_id))
         perspective.delete()
 
     def get(self, perspective_input):
-        """Creates Perspective object with data from CloudHealth"""
+        """Creates Perspective object with data from CloudHealth
+
+        perspective_input can be name or id
+        """
         perspective_id = self._get_perspective_id(perspective_input)
         perspective = Perspective(self._http_client,
                                   perspective_id=str(perspective_id))
@@ -79,9 +95,24 @@ class PerspectiveClient:
             }
         return perspectives
 
-    def update(self, perspective_input, schema):
-        """Updates perspective with specified id, using specified schema"""
+    def update(self, perspective_input, schema=None, spec=None):
+        """Updates perspective with specified id, using specified schema
+
+        perspective_input can be name or id
+        """
         perspective = self.get(perspective_input)
+        perspective_name = perspective.name
+        logger.warning(
+            "Both schema and spec were provided, will just use schema"
+        )
+        if schema or spec:
+            name = schema['name'] if schema.get('name') else spec['name']
+            if perspective_name != name:
+                raise RuntimeError(
+                    "perspective_name {} does not match name {} in provided "
+                    "schema or spec".format(perspective_name, name)
+                )
+
         perspective.update_cloudhealth(schema)
         return perspective
 
@@ -90,7 +121,7 @@ class Perspective:
     # MVP requires the full schema for all operations
     # i.e. changing the perspectives name requires submitting a full schema
     # with just the name changed.
-    def __init__(self, http_client, perspective_id=None, schema=None):
+    def __init__(self, http_client, perspective_id=None):
         # Used to generate ref_id's for new groups.
         self._new_ref_id = 100
         self._http_client = http_client
@@ -107,73 +138,24 @@ class Perspective:
             # This will skip setting the perspective URL,
             # as None isn't part of a valid URL
             self._id = None
-
-        if schema:
-            self._schema = schema
-        else:
-            self._schema = None
+            # Also sets the default "empty schema"
+            self._schema = {
+                'name': 'EMPTY',
+                'merges': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
 
     def __repr__(self):
         return str(self.schema)
-
-    def _spec_from_schema(self):
-        """Spec is never stored, but always generated on the fly based on
-        current schema"""
-        spec_dict = copy.deepcopy(self._schema)
-        for rule in spec_dict['rules']:
-            # categorize schema uses 'ref_id' instead of 'to'
-            # we switch it to 'to' so it's consistent with the filter
-            # rules and makes it easier to understand
-            if rule.get('ref_id'):
-                rule['to'] = rule['ref_id']
-                del rule['ref_id']
-            rule['to'] = self._get_name_by_ref_id(rule['to'])
-            # categorize don't have conditions and or nested dicts
-            for key, value in rule.items():
-                if (key in self._single_item_list_keys
-                        and type(value) is list):
-                    if len(value) != 1:
-                        raise RuntimeError(
-                            "Expected {} in {} to have list "
-                            "with just 1 item.".format(key, rule)
-                        )
-                    rule[key] = value[0]
-            # filter rules have conditions that need to checked
-            if rule.get('condition'):
-                for clause in rule['condition']['clauses']:
-                    for key, value in clause.items():
-                        if (key in self._single_item_list_keys
-                                and type(value) is list):
-                            if len(value) != 1:
-                                raise RuntimeError(
-                                    "Expected {} in {} to have list "
-                                    "with just 1 item.".format(key, clause)
-                                )
-                            clause[key] = value[0]
-
-        del spec_dict['merges']
-        del spec_dict['constants']
-        return spec_dict
-
-    @property
-    def spec(self):
-        spec_dict = self._spec_from_schema()
-        spec_yaml = yaml.dump(spec_dict, default_flow_style=False)
-        return spec_yaml
-
-    @spec.setter
-    def spec(self, spec_input):
-        """Updates schema based on passed spec dict"""
-        logger.debug(
-            "Updated schema using spec: {}".format(spec_input)
-        )
-        self.name = spec_input['name']
-        if spec_input.get('include_in_reports'):
-            self.include_in_reports = spec_input['include_in_reports']
-        # Remove all existing rules, they will be "over written" by the spec
-        self.schema['rules'] = []
-        for rule in spec_input['rules']:
-            self._spec_rule_to_schema(rule)
 
     def _add_constant(self, constant_name, constant_type):
         # Return current ref_id if constant already exists
@@ -218,26 +200,41 @@ class Perspective:
 
         return ref_id
 
-    def create(self, name, schema=None):
-        """Creates an empty perspective or one based on a provided schema"""
-        if schema is None:
-            schema = {
-                'name': name,
-                'merges': [],
-                'constants': [{
-                            'list': [{
-                                'name': 'Other',
-                                'ref_id': '1234567890',
-                                'is_other': 'true'
-                            }],
-                            'type': 'Static Group'
-                        }],
-                'include_in_reports': 'true',
-                'rules': []
-            }
+    def _add_rule(self, rule_definition):
+        logger.debug("Adding Rule: {}".format(rule_definition))
+        self._schema['rules'].append(rule_definition)
 
+    def create(self, perspective_name, schema=None, spec=None):
+        """Creates an empty perspective or one based on a provided schema"""
+        logger.info("Creating perspective {}".format(perspective_name))
+        if schema and spec:
+            logger.debug(
+                "Both schema and spec were provided, will just use schema"
+            )
+
+        if schema or spec:
+            if schema and schema.get('name'):
+                name = schema['name']
+            else:
+                name = spec['name']
+            if perspective_name != name:
+                raise RuntimeError(
+                    "perspective_name {} does not match name {} in provided "
+                    "schema or spec".format(perspective_name, name)
+                )
+
+        if schema:
+            self._schema = schema
+        elif spec:
+            # _schema_from_spec updates self._schema
+            self._schema_from_spec(spec)
+        else:
+            # Just set name for existing empty schema
+            self.name = perspective_name
+
+        # If self.id is set that means we know the perspective already exists
         if not self.id:
-            schema_data = {'schema': schema}
+            schema_data = {'schema': self._schema}
             response = self._http_client.post(self._uri, schema_data)
             perspective_id = response['message'].split(" ")[1]
             self.id = perspective_id
@@ -339,21 +336,61 @@ class Perspective:
 
         return self._schema
 
-    def update_schema(self, schema):
-        self._schema = schema
+    @schema.setter
+    def schema(self, schema_input):
+        self._schema = schema_input
 
     def _schema_from_spec(self, spec):
         """Updates schema based on passed spec dict"""
         logger.debug(
             "Updated schema using spec: {}".format(spec)
         )
-        self.name = spec['Name']
-        if spec.get('Reports'):
-            self.include_in_reports = spec['Reports']
+        self.name = spec['name']
+        if spec.get('include_in_reports'):
+            self.include_in_reports = spec['include_in_reports']
         # Remove all existing rules, they will be "over written" by the spec
         self.schema['rules'] = []
         for rule in spec['rules']:
             self._spec_rule_to_schema(rule)
+
+    def _spec_from_schema(self):
+        """Spec is never stored, but always generated on the fly based on
+        current schema"""
+        spec_dict = copy.deepcopy(self._schema)
+        for rule in spec_dict['rules']:
+            # categorize schema uses 'ref_id' instead of 'to'
+            # we switch it to 'to' so it's consistent with the filter
+            # rules and makes it easier to understand
+            if rule.get('ref_id'):
+                rule['to'] = rule['ref_id']
+                del rule['ref_id']
+            rule['to'] = self._get_name_by_ref_id(rule['to'])
+            # categorize don't have conditions and or nested dicts
+            for key, value in rule.items():
+                if (key in self._single_item_list_keys
+                        and type(value) is list):
+                    if len(value) != 1:
+                        raise RuntimeError(
+                            "Expected {} in {} to have list "
+                            "with just 1 item.".format(key, rule)
+                        )
+                    rule[key] = value[0]
+            # filter rules have conditions that need to checked
+            if rule.get('condition'):
+                for clause in rule['condition']['clauses']:
+                    for key, value in clause.items():
+                        if (key in self._single_item_list_keys
+                                and type(value) is list):
+                            if len(value) != 1:
+                                raise RuntimeError(
+                                    "Expected {} in {} to have list "
+                                    "with just 1 item.".format(key, clause)
+                                )
+                            clause[key] = value[0]
+
+        del spec_dict['merges']
+        del spec_dict['constants']
+        return spec_dict
 
     def _spec_rule_to_schema(self, rule):
         logger.debug(
@@ -387,19 +424,36 @@ class Perspective:
         # Convert to single item lists where needed
         # categorize don't have conditions and or nested dicts
         for key, value in rule.items():
-            if key in self._single_item_list_keys:
+            if key in self._single_item_list_keys and type(value) is strgit add :
                 rule[key] = [value]
         # filter rules have conditions that need to checked
         if rule.get('condition'):
             for clause in rule['condition']['clauses']:
                 for key, value in clause.items():
-                    if key in self._single_item_list_keys:
+                    if (key in self._single_item_list_keys
+                            and type(value) is str):
                         clause[key] = [value]
         self._add_rule(rule)
 
-    def _add_rule(self, rule_definition):
-        logger.debug("Adding Rule: {}".format(rule_definition))
-        self._schema['rules'].append(rule_definition)
+    @property
+    def spec(self):
+        spec_dict = self._spec_from_schema()
+        spec_yaml = yaml.dump(spec_dict, default_flow_style=False)
+        return spec_yaml
+
+    @spec.setter
+    def spec(self, spec_input):
+        """Updates schema based on passed spec dict"""
+        logger.debug(
+            "Updated schema using spec: {}".format(spec_input)
+        )
+        self.name = spec_input['name']
+        if spec_input.get('include_in_reports'):
+            self.include_in_reports = spec_input['include_in_reports']
+        # Remove all existing rules, they will be "over written" by the spec
+        self.schema['rules'] = []
+        for rule in spec_input['rules']:
+            self._spec_rule_to_schema(rule)
 
     def update_cloudhealth(self, schema=None):
         """Updates cloud with objects state or with provided schema"""
