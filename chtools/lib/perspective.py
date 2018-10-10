@@ -424,7 +424,7 @@ class Perspective:
         # Convert to single item lists where needed
         # categorize don't have conditions and or nested dicts
         for key, value in rule.items():
-            if key in self._single_item_list_keys and type(value) is strgit add :
+            if key in self._single_item_list_keys and type(value) is str:
                 rule[key] = [value]
         # filter rules have conditions that need to checked
         if rule.get('condition'):
