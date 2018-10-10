@@ -254,7 +254,7 @@ class Perspective:
         # hard_delete can cause CloudHealth to return 500 errors if
         # perspective schema gets into a strange state delete_params = {
         # 'force': True, 'hard_delete': True}
-        delete_params = {'force': True}
+        delete_params = {'force': True, 'hard_delete': True}
         response = self._http_client.delete(self._uri, params=delete_params)
         logger.debug(response)
         self._schema = None
