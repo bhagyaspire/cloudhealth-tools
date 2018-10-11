@@ -1,1 +1,37 @@
-{"name": "categorize", "merges": [], "constants": [{"list": [{"name": "Other", "ref_id": "1234567890", "is_other": "true"}], "type": "Static Group"}, {"type": "Dynamic Group Block", "list": [{"ref_id": "101", "name": "Owner"}]}], "include_in_reports": "true", "rules": [{"type": "categorize", "asset": "AwsAsset", "tag_field": ["Creator"], "name": "Owner", "ref_id": "101"}]}
+{
+  "name": "categorize",
+  "merges": [],
+  "constants": [
+    {
+      "list": [
+        {
+          "name": "Other",
+          "ref_id": "1234567890",
+          "is_other": "true"
+        }
+      ],
+      "type": "Static Group"
+    },
+    {
+      "type": "Dynamic Group Block",
+      "list": [
+        {
+          "ref_id": "101",
+          "name": "Owner"
+        }
+      ]
+    }
+  ],
+  "include_in_reports": "true",
+  "rules": [
+    {
+      "type": "categorize",
+      "asset": "AwsAsset",
+      "tag_field": [
+        "Creator"
+      ],
+      "name": "Owner",
+      "ref_id": "101"
+    }
+  ]
+}

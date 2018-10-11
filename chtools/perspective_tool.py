@@ -12,9 +12,7 @@ from chtools.lib.client import CloudHealth
 
 def parse_args(arguments):
     parser = argparse.ArgumentParser(
-        description="Create and manage perspectives via YAML spec files. "
-                    "Tool can also be used to delete perspective or print a "
-                    "perspective's JSON schema. "
+        description="Create and manage perspectives from the command line. "
     )
 
     parser.add_argument('action',
@@ -36,12 +34,12 @@ def parse_args(arguments):
     parser.add_argument('--name',
                         help="Name of the perspective to get or delete. Name "
                              "for create or update will come from the spec "
-                             "or schema file")
+                             "or schema file.")
     parser.add_argument('--spec-file',
-                        help="Path to the file containing spec used to create "
-                             "or update the perspective.")
+                        help="Path to the file containing YAML spec used to "
+                             "create or update the perspective.")
     parser.add_argument('--schema-file',
-                        help="Path to the file containing schema used to "
+                        help="Path to the file containing JSON schema used to "
                              "create or update the perspective.")
     parser.add_argument('--log-level',
                         default='warn',
