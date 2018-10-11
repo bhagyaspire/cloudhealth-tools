@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 
 import pytest
@@ -13,192 +14,82 @@ logger.setLevel(logging.DEBUG)
 path = os.path.abspath(__file__)
 dir_path = os.path.dirname(path)
 specs_dir = dir_path + "/specs"
+schemas_dir = dir_path + "/schemas"
 
-@pytest.fixture()
-def search_spec():
-    spec_path = specs_dir + "/search-perspective.yaml"
+test_cases = [
+        'tag_filter',
+        'tag_search',
+        'tag_active',
+        'multiple_rules_to_a_group',
+        'categorize',
+        'categorize_and_filters',
+        'tag_filter_multiple_assets'
+    ]
+
+
+@pytest.mark.parametrize(
+    'test_case', test_cases
+
+)
+def test_spec_to_schema(test_case):
+    perspective = Perspective(http_client=None)
+    spec_path = '{}/{}.yaml'.format(specs_dir, test_case)
     with open(spec_path) as spec_file:
         spec = yaml.load(spec_file)
-    return spec
+    schema_path = '{}/{}.json'.format(schemas_dir, test_case)
+    with open(schema_path) as schema_file:
+        expected_schema = json.load(schema_file)
+    perspective.spec = spec
+    differences = DeepDiff(expected_schema, perspective.schema)
+    assert differences == {}, (
+        "DeepDiff reports the following differences between expected schema "
+        "and generated schema: {}".format(differences)
+    )
 
 
-@pytest.fixture()
-def group_by_tag_value_spec():
-    spec_path = specs_dir + "/autogroup.yaml"
+@pytest.mark.parametrize(
+    'test_case', test_cases
+
+)
+def test_schema_to_spec(test_case):
+    perspective = Perspective(http_client=None)
+    spec_path = '{}/{}.yaml'.format(specs_dir, test_case)
     with open(spec_path) as spec_file:
-        spec = yaml.load(spec_file)
-    return spec
+        expected_spec = yaml.load(spec_file)
+    schema_path = '{}/{}.json'.format(schemas_dir, test_case)
+    with open(schema_path) as schema_file:
+        schema = json.load(schema_file)
+    perspective.schema = schema
+    differences = DeepDiff(expected_spec, yaml.load(perspective.spec))
+    # Support difference of 'search' type becoming 'filter' type
+    if differences.get('values_changed'):
+        diff_keys_to_remove = []
+        for key, value in differences['values_changed'].items():
+            if (value['new_value'] == 'filter'
+                    and value['old_value'] == 'search'):
+                diff_keys_to_remove.append(key)
+        for key in diff_keys_to_remove:
+            del differences['values_changed'][key]
+        if differences == {'values_changed': {}}:
+            del differences['values_changed']
+
+    assert differences == {}, (
+        "DeepDiff reports the following differences between expected schema "
+        "and generated schema: {}".format(differences)
+    )
 
 
-@pytest.fixture()
-def categorize_perspective():
-    spec_path = specs_dir + "/categorize-perspective.yaml"
-    with open(spec_path) as spec_file:
-        spec = yaml.load(spec_file)
-    return spec
-
-
-@pytest.fixture()
-def new_perspective():
-    http_client = None
-    perspective = Perspective(http_client)
-    empty_schema = {
-                        'name': 'new_perspective',
-                        'merges': [],
-                        'constants': [{
-                            'list': [{
-                                'name': 'Other',
-                                'ref_id': '1234567890',
-                                'is_other': 'true'
-                            }],
-                            'type': 'Static Group'
-                        }],
-                        'include_in_reports': 'true',
-                        'rules': []
-                    }
-    perspective._schema = empty_schema
-    return perspective
-
-
-def test_create_search_perspective(new_perspective, search_spec):
-    perspective = new_perspective
-    perspective.update_spec(search_spec)
-
-    expected_schema = {
-        'constants': [{'list': [{'is_other': 'true',
-                                  'name': 'Other',
-                                  'ref_id': '1234567890'},
-                                 {'name': 'Admin', 'ref_id': 101},
-                                 {'name': 'Other', 'ref_id': 102},
-                                 {'name': 'Web', 'ref_id': 103},
-                                 {'name': 'Non-Conforming', 'ref_id': 104}],
-                        'type': 'Static Group'}],
-         'include_in_reports': True,
-         'merges': [],
-         'name': 'Service',
-         'rules': [{'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Admin'}]},
-                    'to': 101,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Admin'}]},
-                    'to': 101,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Admin'}]},
-                    'to': 101,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'other'},
-                                              {'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Other'}],
-                                  'combine_with': 'OR'},
-                    'to': 102,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'other'},
-                                              {'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Other'}],
-                                  'combine_with': 'OR'},
-                    'to': 102,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'other'},
-                                              {'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Other'}],
-                                  'combine_with': 'OR'},
-                    'to': 102,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Web'},
-                                              {'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'WWW'}],
-                                  'combine_with': 'OR'},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Tier'],
-                                               'val': 'Web'},
-                                              {'op': '=',
-                                               'tag_field': ['Tier'],
-                                               'val': 'WWW'}],
-                                  'combine_with': 'OR'},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Web'},
-                                              {'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'WWW'}],
-                                  'combine_with': 'OR'},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Tier'],
-                                               'val': 'Web'},
-                                              {'op': '=',
-                                               'tag_field': ['Tier'],
-                                               'val': 'WWW'}],
-                                  'combine_with': 'OR'},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Web'},
-                                              {'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'WWW'}],
-                                  'combine_with': 'OR'},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Tier'],
-                                               'val': 'Web'},
-                                              {'op': '=',
-                                               'tag_field': ['Tier'],
-                                               'val': 'WWW'}],
-                                  'combine_with': 'OR'},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': 'Has A Value',
-                                               'tag_field': ['Service']}]},
-                    'to': 104,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': 'Has A Value',
-                                               'tag_field': ['Service']}]},
-                    'to': 104,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': 'Has A Value',
-                                               'tag_field': ['Service']}]},
-                    'to': 104,
-                    'type': 'filter'}]}
+def test_update_filter_via_spec():
+    perspective = Perspective(http_client=None)
+    initial_schema_path = '{}/tag_filter.json'.format(schemas_dir)
+    with open(initial_schema_path) as initial_schema_path:
+        perspective.schema = json.load(initial_schema_path)
+    update_spec_path = '{}/tag_filter_update.yaml'.format(specs_dir)
+    with open(update_spec_path) as update_spec_file:
+        perspective.spec = yaml.load(update_spec_file)
+    expected_schema_path = '{}/tag_filter_update.json'.format(schemas_dir)
+    with open(expected_schema_path) as expected_schema_file:
+        expected_schema = json.load(expected_schema_file)
 
     differences = DeepDiff(expected_schema, perspective.schema)
     assert differences == {}, (
@@ -207,120 +98,19 @@ def test_create_search_perspective(new_perspective, search_spec):
     )
 
 
-def test_create_group_by_tag_value_perspective(new_perspective,
-                                               group_by_tag_value_spec):
-    perspective = new_perspective
-    perspective.update_spec(group_by_tag_value_spec)
-
-    expected_schema = {
-        'constants': [{'list': [{'is_other': 'true',
-                          'name': 'Other',
-                          'ref_id': '1234567890'},
-                         {'name': 'Web', 'ref_id': 101},
-                         {'name': 'App', 'ref_id': 102},
-                         {'name': 'DB', 'ref_id': 103},
-                         {'name': 'Non-Conforming', 'ref_id': 104}],
-                'type': 'Static Group'}],
-         'include_in_reports': 'true',
-         'merges': [],
-         'name': 'ServiceAutoGroup',
-         'rules': [{'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Web'}]},
-                    'to': 101,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Web'}]},
-                    'to': 101,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'Web'}]},
-                    'to': 101,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'App'}]},
-                    'to': 102,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'App'}]},
-                    'to': 102,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'App'}]},
-                    'to': 102,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'DB'}]},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'DB'}]},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': '=',
-                                               'tag_field': ['Service'],
-                                               'val': 'DB'}]},
-                    'to': 103,
-                    'type': 'filter'},
-                   {'asset': 'AwsAsset',
-                    'condition': {'clauses': [{'op': 'Has A Value',
-                                               'tag_field': ['Service']}]},
-                    'to': 104,
-                    'type': 'filter'},
-                   {'asset': 'AwsTaggableAsset',
-                    'condition': {'clauses': [{'op': 'Has A Value',
-                                               'tag_field': ['Service']}]},
-                    'to': 104,
-                    'type': 'filter'},
-                   {'asset': 'AwsEmrCluster',
-                    'condition': {'clauses': [{'op': 'Has A Value',
-                                               'tag_field': ['Service']}]},
-                    'to': 104,
-                    'type': 'filter'}]}
-
-    differences = DeepDiff(expected_schema, perspective.schema)
-    assert differences == {}, (
-        "DeepDiff reports the following differences between expected schema "
-        "and generated schema: {}".format(differences)
+def test_add_categorize_via_spec():
+    perspective = Perspective(http_client=None)
+    initial_schema_path = '{}/tag_filter.json'.format(schemas_dir)
+    with open(initial_schema_path) as initial_schema_path:
+        perspective.schema = json.load(initial_schema_path)
+    update_spec_path = '{}/tag_filter_add_categorize.yaml'.format(specs_dir)
+    with open(update_spec_path) as update_spec_file:
+        perspective.spec = yaml.load(update_spec_file)
+    expected_schema_path = '{}/tag_filter_add_categorize.json'.format(
+        schemas_dir
     )
-
-
-def test_create_categorize_perspective(new_perspective,
-                                       categorize_perspective):
-    perspective = new_perspective
-    perspective.update_spec(categorize_perspective)
-
-    expected_schema = {
-                        'constants': [{'list': [{'is_other': 'true',
-                                          'name': 'Other',
-                                          'ref_id': '1234567890'}],
-                                'type': 'Static Group'},
-                               {'list': [{'name': 'Creators', 'ref_id': 101}],
-                                'type': 'Dynamic Group Block'}],
-                         'include_in_reports': 'true',
-                         'merges': [],
-                         'name': 'DynamicOwner',
-                         'rules': [{'asset': 'AwsTaggableAsset',
-                                    'name': 'Creators',
-                                    'ref_id': 101,
-                                    'tag_field': ['Creator'],
-                                    'type': 'categorize'}]}
+    with open(expected_schema_path) as expected_schema_file:
+        expected_schema = json.load(expected_schema_file)
 
     differences = DeepDiff(expected_schema, perspective.schema)
     assert differences == {}, (

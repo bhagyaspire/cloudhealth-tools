@@ -4,7 +4,7 @@ with open('README.md') as readme_file:
     readme = readme_file.read()
 
 setup(name='chtools',
-      version='1.0.6',
+      version='2.0.0',
       description='Automation Tools for CloudHealth',
       url='https://github.com/bluechiptek/cloudhealth-tools',
       author='BlueChipTek',
@@ -15,6 +15,7 @@ setup(name='chtools',
       packages=find_packages(),
       python_requires='>=3',
       install_requires=[
+            'deepdiff==3.3.0',
             'certifi==2018.1.18',
             'chardet==3.0.4',
             'idna==2.6',

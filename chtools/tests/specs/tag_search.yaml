@@ -1,0 +1,12 @@
+name: tag_search
+include_in_reports: 'true'
+rules:
+- type: search
+  to: Dev
+  asset: AwsAsset
+  condition:
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Dev
+

@@ -1,0 +1,20 @@
+name: multiple_rules_to_a_group
+include_in_reports: 'true'
+rules:
+- type: search
+  asset: AwsAsset
+  to: Dev
+  condition:
+    clauses:
+    - tag_field: Env
+      op: "="
+      val: Dev
+- type: filter
+  asset: AwsAccount
+  to: Dev
+  condition:
+    clauses:
+    - field: Owner Id
+      op: "="
+      val: '899826514230'
+

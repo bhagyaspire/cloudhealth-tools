@@ -1,0 +1,32 @@
+name: tag_filter_add_categorize
+include_in_reports: 'true'
+rules:
+- type: filter
+  to: Dev
+  asset: AwsAsset
+  condition:
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Dev
+- type: filter
+  to: Stage
+  asset: AwsAsset
+  condition:
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Stage
+- type: filter
+  to: Prod
+  asset: AwsAsset
+  condition:
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Prod
+- type: categorize
+  asset: AwsAsset
+  tag_field: Env
+  to: Envs
+  name: Envs

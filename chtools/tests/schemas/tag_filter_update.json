@@ -1,0 +1,107 @@
+{
+  "name": "tag_filter_update",
+  "merges": [],
+  "constants": [
+    {
+      "list": [
+        {
+          "name": "Other",
+          "ref_id": "1234567890",
+          "is_other": "true"
+        },
+        {
+          "ref_id": "101",
+          "name": "Dev"
+        },
+        {
+          "ref_id": "102",
+          "name": "Stage"
+        },
+        {
+          "ref_id": "103",
+          "name": "Prod"
+        },
+        {
+          "ref_id": "104",
+          "name": "DR"
+        }
+      ],
+      "type": "Static Group"
+    }
+  ],
+  "include_in_reports": "true",
+  "rules": [
+    {
+      "type": "filter",
+      "to": "101",
+      "asset": "AwsAsset",
+      "condition": {
+        "combine_with": "OR",
+        "clauses": [
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "Dev"
+          },
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "Test"
+          }
+        ]
+      }
+    },
+    {
+      "type": "filter",
+      "to": "102",
+      "asset": "AwsAsset",
+      "condition": {
+        "clauses": [
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "Stage"
+          }
+        ]
+      }
+    },
+    {
+      "type": "filter",
+      "to": "103",
+      "asset": "AwsAsset",
+      "condition": {
+        "clauses": [
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "Prod"
+          }
+        ]
+      }
+    },
+    {
+      "type": "filter",
+      "to": "104",
+      "asset": "AwsAsset",
+      "condition": {
+        "clauses": [
+          {
+            "op": "=",
+            "tag_field": [
+              "Env"
+            ],
+            "val": "DR"
+          }
+        ]
+      }
+    }
+  ]
+}
