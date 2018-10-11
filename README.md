@@ -23,6 +23,8 @@ As a provider you can specify a `--client-api-id` argument to perform actions ag
 
 ## TOOLS
 
+These tools are installed into your path to be used via the CLI.
+
 ### perspective-tool
 
 The perspective-tool provides a programmatic way to interact with perspectives. It can do this either via [raw JSON schemas as described in the CloudHealth API Guide](http://apidocs.cloudhealthtech.com/#perspectives_introduction-to-perspectives-api) or via YAML based spec files.
@@ -38,7 +40,7 @@ The YAML based spec files are based on the JSON schema, but some "syntactical su
 
 List of CLI arguments can be found via the help. Refer to the actual output of help to ensure latest info.
 ```
-usage: perspective_tool [-h] [--api-key API_KEY]
+usage: perspective-tool [-h] [--api-key API_KEY]
                         [--client-api-id CLIENT_API_ID] [--name NAME]
                         [--spec-file SPEC_FILE] [--schema-file SCHEMA_FILE]
                         [--log-level LOG_LEVEL]
@@ -81,7 +83,7 @@ Examples of spec files can be found in `tests/specs`.
 It's also a good idea create a rule in the Web GUI and then use the `perspective-tool` to look at the YAML spec for that perspective. Getting the YAML spec for a perspective can be done using a command such as:
 
 ```
-perspective_tool get-spec --name test-perspective
+perspective-tool get-spec --name test-perspective
 ```
 
 Spec files used by `perspective-tool` are in YAML and support the following top-level keys, which all are required. Note all keys are lower case.
