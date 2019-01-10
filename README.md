@@ -90,6 +90,9 @@ Spec files used by `perspective-tool` are in YAML and support the following top-
 
  * name: Name of the perspective.
  * include_in_reports: string 'true' or 'false'.
+ * match_lowercase_tag_field: boolean. If true, then filter rules will always match the lowercase value of the tag_field in the filter rule clauses. For example if the rule matches the tag name of "Test" then a clause will be added to match the tag name of "test" as well.
+ * match_lowercase_tag_val: boolean. Same as match_lowercase_tag_field but for the values of the tag instead of the tag name.
+
  * rules: A list of rule mappings.
 
 Each rule is a YAML mapping, with two types of rules `filter` and `categorize`.
