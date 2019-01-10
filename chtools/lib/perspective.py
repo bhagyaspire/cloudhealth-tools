@@ -125,6 +125,7 @@ class Perspective:
         self._new_ref_id = 100
         self._http_client = http_client
         self._uri = 'v1/perspective_schemas'
+        self._match_lowercase_tag_val = None
         # Schema has includes several lists that can only include a single item
         # items that match these keys will be converted to/from a single
         # item list as needed
@@ -344,6 +345,21 @@ class Perspective:
         self._schema['name'] = new_name
 
     @property
+    def match_lowercase_tag_val(self):
+        return bool(self._match_lowercase_tag_val)
+
+    @match_lowercase_tag_val.setter
+    def match_lowercase_tag_val(self, value):
+        """If this is set to true then perspective rules will be set to always
+        include the string in all lower case.
+
+        I.e. if the rule is matching for the value "Test" and this is set to
+            True then a rule to match "test" will also be created.
+
+        """
+        self._match_lowercase_tag_val = bool(value)
+
+    @property
     def schema(self):
         if not self._schema:
             self.get_schema()
@@ -470,11 +486,39 @@ class Perspective:
                     if (key in self._single_item_list_keys
                             and type(value) is str):
                         clause[key] = [value]
+
+        # Include matching on lower case tag values if match_lowercase_tag_val
+        if self.match_lowercase_tag_val:
+            if rule['type'] == 'filter':
+                combine_with = rule['condition'].get('combine_with')
+                if combine_with is None:
+                    # If it's None then we add OR condition to support matching
+                    # entered value OR lower case value
+                    rule['condition']['combine_with'] = "OR"
+                elif combine_with != 'OR':
+                    raise RuntimeError(
+                        "match_lowercase_tag_val only supports rules with a "
+                        "combine_with of 'OR'. Rule does not have supported "
+                        "combine_with: {}".format(rule)
+                    )
+
+                clauses = rule['condition']['clauses']
+                new_clauses = []
+                for clause in clauses:
+                    tag_value = clause['val']
+                    if not tag_value.islower():
+                        new_clause = dict(clause)
+                        new_clause['val'] = tag_value.lower()
+                        new_clauses.append(new_clause)
+                clauses.extend(new_clauses)
+
         self._add_rule(rule)
 
     @property
     def spec(self):
         spec_dict = self._spec_from_schema()
+        if self.match_lowercase_tag_val:
+            spec_dict['match_lowercase_tag_val'] = self.match_lowercase_tag_val
         spec_yaml = yaml.dump(spec_dict, default_flow_style=False)
         return spec_yaml
 
@@ -487,6 +531,10 @@ class Perspective:
         self.name = spec_input['name']
         if spec_input.get('include_in_reports'):
             self.include_in_reports = spec_input['include_in_reports']
+        if spec_input.get('match_lowercase_tag_val'):
+            self.match_lowercase_tag_val = spec_input[
+                'match_lowercase_tag_val'
+            ]
         # Remove all existing rules, they will be "over written" by the spec
         self.schema['rules'] = []
         for rule in spec_input['rules']:

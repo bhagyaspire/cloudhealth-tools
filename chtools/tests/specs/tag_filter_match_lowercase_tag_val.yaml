@@ -1,0 +1,31 @@
+name: tag_filter_match_lowercase_tag_val
+match_lowercase_tag_val: 'true'
+rules:
+- type: filter
+  to: NonProd
+  asset: AwsAsset
+  condition:
+    combine_with: OR
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Dev
+    - op: '='
+      tag_field: Env
+      val: Test
+    - op: '='
+      tag_field: Env
+      val: Stage
+- type: filter
+  to: Prod
+  asset: AwsAsset
+  condition:
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Prod
+- type: categorize
+  asset: AwsAsset
+  tag_field: Env
+  to: Other
+  name: Env

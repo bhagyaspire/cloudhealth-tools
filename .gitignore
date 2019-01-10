@@ -5,3 +5,4 @@ scratch/
 **/.pytest_cache/**
 dist/
 chtools.egg-info/
+.eggs/
