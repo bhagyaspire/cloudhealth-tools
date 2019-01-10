@@ -546,8 +546,10 @@ class Perspective:
         """
         new_clauses = []
         for clause in clauses:
-            tag_value = clause[field]
-            if not tag_value.islower():
+            # Not all clauses will match on the field so only try and match
+            # lower case if the rules has the field
+            tag_value = clause.get(field)
+            if tag_value and not tag_value.islower():
                 new_clause = dict(clause)
                 new_clause[field] = tag_value.lower()
                 new_clauses.append(new_clause)

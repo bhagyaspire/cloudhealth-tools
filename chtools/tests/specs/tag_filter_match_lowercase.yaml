@@ -42,8 +42,19 @@ rules:
     - op: '='
       tag_field: env
       val: lower
+- asset:
+  - AwsAsset
+  - AwsTaggableAsset
+  - AwsEmrCluster
+  condition:
+    clauses:
+    - op: Has A Value
+      tag_field: Env
+  to: Non-Conforming
+  type: filter
 - type: categorize
   asset: AwsAsset
   tag_field: Env
   to: Other
   name: Other
+
