@@ -28,7 +28,7 @@ general_test_cases = [
         'tag_filter_multiple_assets'
     ]
 
-spec_to_schema_test_cases = ['tag_filter_match_lowercase_tag_val']
+spec_to_schema_test_cases = ['tag_filter_match_lowercase']
 schema_to_spec_test_cases = []
 
 
