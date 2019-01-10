@@ -15,12 +15,15 @@
 		}, {
 			"ref_id": "103",
 			"name": "Lower"
+		}, {
+			"ref_id": "104",
+			"name": "Non-Conforming"
 		}],
 		"type": "Static Group"
 	}, {
 		"type": "Dynamic Group Block",
 		"list": [{
-			"ref_id": "104",
+			"ref_id": "105",
 			"name": "Other"
 		}]
 	}],
@@ -299,10 +302,52 @@
 			}]
 		}
 	}, {
+		"asset": "AwsAsset",
+		"condition": {
+			"clauses": [{
+				"op": "Has A Value",
+				"tag_field": ["Env"]
+			}, {
+				"op": "Has A Value",
+				"tag_field": ["env"]
+			}],
+			"combine_with": "OR"
+		},
+		"to": "104",
+		"type": "filter"
+	}, {
+		"asset": "AwsTaggableAsset",
+		"condition": {
+			"clauses": [{
+				"op": "Has A Value",
+				"tag_field": ["Env"]
+			}, {
+				"op": "Has A Value",
+				"tag_field": ["env"]
+			}],
+			"combine_with": "OR"
+		},
+		"to": "104",
+		"type": "filter"
+	}, {
+		"asset": "AwsEmrCluster",
+		"condition": {
+			"clauses": [{
+				"op": "Has A Value",
+				"tag_field": ["Env"]
+			}, {
+				"op": "Has A Value",
+				"tag_field": ["env"]
+			}],
+			"combine_with": "OR"
+		},
+		"to": "104",
+		"type": "filter"
+	}, {
 		"type": "categorize",
 		"asset": "AwsAsset",
 		"tag_field": ["Env"],
 		"name": "Other",
-		"ref_id": "104"
+		"ref_id": "105"
 	}]
 }
