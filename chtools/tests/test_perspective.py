@@ -16,7 +16,9 @@ dir_path = os.path.dirname(path)
 specs_dir = dir_path + "/specs"
 schemas_dir = dir_path + "/schemas"
 
-test_cases = [
+# general_test_cases are for test cases to convert both ways between
+# schema and spec
+general_test_cases = [
         'tag_filter',
         'tag_search',
         'tag_active',
@@ -26,9 +28,12 @@ test_cases = [
         'tag_filter_multiple_assets'
     ]
 
+spec_to_schema_test_cases = ['tag_filter_match_lowercase']
+schema_to_spec_test_cases = []
+
 
 @pytest.mark.parametrize(
-    'test_case', test_cases
+    'test_case', general_test_cases + spec_to_schema_test_cases
 
 )
 def test_spec_to_schema(test_case):
@@ -48,7 +53,7 @@ def test_spec_to_schema(test_case):
 
 
 @pytest.mark.parametrize(
-    'test_case', test_cases
+    'test_case', general_test_cases + schema_to_spec_test_cases
 
 )
 def test_schema_to_spec(test_case):

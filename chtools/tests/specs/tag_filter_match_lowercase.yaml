@@ -1,0 +1,49 @@
+name: tag_filter_match_lowercase
+match_lowercase_tag_field: true
+match_lowercase_tag_val: true
+rules:
+- type: filter
+  to: NonProd
+  asset:
+    - AwsAsset
+    - AwsTaggableAsset
+    - AwsEmrCluster
+  condition:
+    combine_with: OR
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Dev
+    - op: '='
+      tag_field: Env
+      val: Test
+    - op: '='
+      tag_field: Env
+      val: Stage
+- type: filter
+  to: Prod
+  asset:
+    - AwsAsset
+    - AwsTaggableAsset
+    - AwsEmrCluster
+  condition:
+    clauses:
+    - op: '='
+      tag_field: Env
+      val: Prod
+- type: filter
+  to: Lower
+  asset:
+    - AwsAsset
+    - AwsTaggableAsset
+    - AwsEmrCluster
+  condition:
+    clauses:
+    - op: '='
+      tag_field: env
+      val: lower
+- type: categorize
+  asset: AwsAsset
+  tag_field: Env
+  to: Other
+  name: Other
