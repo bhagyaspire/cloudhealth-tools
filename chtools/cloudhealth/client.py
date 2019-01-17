@@ -86,7 +86,7 @@ class HTTPClient:
         self.params = params
 
 
-class CloudHealth:
+class CloudHealthClient:
 
     def __init__(self, api_key, client_api_id=None):
         self._http_client = HTTPClient(DEFAULT_CLOUDHEALTH_API_URL,

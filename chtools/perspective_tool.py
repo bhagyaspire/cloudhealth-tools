@@ -2,13 +2,12 @@
 import argparse
 import json
 import logging
-from operator import itemgetter
 import os
 import sys
 
 import yaml
 
-from chtools.lib.client import CloudHealth
+from chtools.cloudhealth.client import CloudHealthClient
 
 
 def parse_args(arguments):
@@ -121,7 +120,7 @@ def main(arguments=sys.argv[1:]):
         else:
             perspective_name = args.name
 
-    ch = CloudHealth(api_key, client_api_id=args.client_api_id)
+    ch = CloudHealthClient(api_key, client_api_id=args.client_api_id)
     perspective_client = ch.client('perspective')
 
     if args.action == 'create':
