@@ -1,13 +1,14 @@
 import logging
 
+from chtools.cloudhealth.client import CloudHealthClient
 from chtools.perspective.data import Perspective
 
 logger = logging.getLogger(__name__)
 
 
-class PerspectiveClient:
-    def __init__(self, http_client):
-        self._http_client = http_client
+class PerspectiveClient(CloudHealthClient):
+    def __init__(self, api_key, client_api_id=None):
+        super().__init__(api_key, client_api_id=client_api_id)
         self._uri = 'v1/perspective_schemas/'
 
     def _get_perspective_id(self, perspective_input):

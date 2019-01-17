@@ -7,7 +7,7 @@ import sys
 
 import yaml
 
-from chtools.cloudhealth.client import CloudHealthClient
+from chtools.perspective.client import PerspectiveClient
 
 
 def parse_args(arguments):
@@ -120,8 +120,8 @@ def main(arguments=sys.argv[1:]):
         else:
             perspective_name = args.name
 
-    ch = CloudHealthClient(api_key, client_api_id=args.client_api_id)
-    perspective_client = ch.client('perspective')
+    perspective_client = PerspectiveClient(api_key,
+                                           client_api_id=args.client_api_id)
 
     if args.action == 'create':
         if perspective_client.check_exists(perspective_name):
