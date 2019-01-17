@@ -1,12 +1,12 @@
-import logging
 import json
+import logging
 import os
 
 import pytest
 import yaml
 from deepdiff import DeepDiff
 
-from chtools.lib.perspective import Perspective
+from chtools.perspective.data import Perspective
 
 logger = logging.getLogger('cloudhealth.perspective')
 logger.setLevel(logging.DEBUG)

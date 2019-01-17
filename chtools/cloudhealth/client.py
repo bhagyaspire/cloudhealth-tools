@@ -3,7 +3,7 @@ import logging
 
 import requests
 
-from chtools.lib.perspective import PerspectiveClient
+from chtools.perspective.client import PerspectiveClient
 
 logger = logging.getLogger(__name__)
 
