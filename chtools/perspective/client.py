@@ -59,6 +59,8 @@ class PerspectiveClient(CloudHealthClient):
         perspective = Perspective(self._http_client,
                                   perspective_id=str(perspective_id))
         perspective.delete()
+        # returned perspective will have schema set to None
+        return perspective
 
     def get(self, perspective_input):
         """Creates Perspective object with data from CloudHealth
