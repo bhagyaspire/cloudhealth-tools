@@ -98,6 +98,52 @@ def test_delete():
     assert result._schema is None
 
 
+def test_get():
+    client = PerspectiveClient('fake_api_key')
+
+    index_mock_response = {
+        '2954937501756': {
+            'name': 'BCT - Accounts by Billing Account', 'active': True
+        },
+        '343598849467': {
+            'name': 'BCT Customers', 'active': True
+        },
+        '2954937502943': {
+            'name': 'tag_filter', 'active': True
+        }
+    }
+
+    get_schema_mock_response = {
+        'schema': {'name': 'tag_filter', 'include_in_reports': 'true',
+                   'rules': [{'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634084', 'condition': {'clauses': [
+                           {'tag_field': ['Env'], 'op': '=', 'val': 'Dev'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634085', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Stage'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634086', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Prod'}]}}], 'merges': [],
+                   'constants': [{'type': 'Static Group', 'list': [
+                       {'ref_id': '2954937634084', 'name': 'Dev'},
+                       {'ref_id': '2954937634085', 'name': 'Stage'},
+                       {'ref_id': '2954937634086', 'name': 'Prod'},
+                       {'ref_id': '2954937634083', 'name': 'Other',
+                        'is_other': 'true'}]}]}}
+
+    with requests_mock.Mocker() as m:
+        m.get('https://chapi.cloudhealthtech.com/v1/perspective_schemas/',
+              json=index_mock_response)
+        m.get('https://chapi.cloudhealthtech.com/v1/perspective_schemas/2954937502943',
+              json=get_schema_mock_response)
+        # Returns a Perspective object
+        result = client.get('tag_filter')
+
+    assert result.name == 'tag_filter'
+
+
 def test_index():
     client = PerspectiveClient('fake_api_key')
 
