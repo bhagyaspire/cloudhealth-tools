@@ -8,7 +8,7 @@ from deepdiff import DeepDiff
 
 from chtools.perspective.data import Perspective
 
-logger = logging.getLogger('cloudhealth.perspective')
+logger = logging.getLogger('chtools.perspective')
 logger.setLevel(logging.DEBUG)
 
 path = os.path.abspath(__file__)

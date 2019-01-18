@@ -55,7 +55,9 @@ class HTTPClient:
                 ('Request to {} failed! HTTP Error Code: {} '
                  'Response: {}').format(
                     url, response.status_code, response_message))
-        logger.debug(response.json())
+        logger.debug(
+            "Response: {}".format(response.json())
+        )
         return response.json()
 
     def delete(self, uri, params=None):
