@@ -8,6 +8,7 @@ from chtools.perspective.cli import PerspectiveCliHandler
 
 logger = logging.getLogger('chtools')
 
+
 def parse_args(arguments):
     parser = argparse.ArgumentParser(
         description="CLI to interact with CloudHealth.",
@@ -77,6 +78,22 @@ def main(arguments=sys.argv[1:]):
         log_level=log_level
     )
     cli_handler.execute()
+
+
+def perspective_tool(arguments=sys.argv[1:]):
+    """This exists to support the legacy 'perspective-tool'
+    that is now part of chtools"""
+    perspective_tool_logger = logging.getLogger('perspective_tool')
+    perspective_tool_logger.setLevel(logging.WARN)
+    console_handler = logging.StreamHandler()
+    perspective_tool_logger.addHandler(console_handler)
+
+    perspective_tool_logger.warning(
+        "perspective-tool is depreciated, use 'chtools perspective' "
+        "command instead."
+    )
+    arguments.insert(0, 'perspective')
+    main(arguments=arguments)
 
 if __name__ == "__main__":
     main()

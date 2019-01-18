@@ -4,7 +4,7 @@ with open('README.md') as readme_file:
     readme = readme_file.read()
 
 setup(name='chtools',
-      version='2.1.1',
+      version='2.2.0',
       description='Automation Tools for CloudHealth',
       url='https://github.com/bluechiptek/cloudhealth-tools',
       author='BlueChipTek',
@@ -26,7 +26,10 @@ setup(name='chtools',
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
       entry_points={
-            'console_scripts': ['perspective-tool=chtools.perspective_tool:main']
+            'console_scripts': [
+                  'perspective-tool=chtools.cli.cli:perspective_tool',
+                  'chtools=chtools.cli.cli:main'
+            ]
       },
       classifiers=[
             'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
