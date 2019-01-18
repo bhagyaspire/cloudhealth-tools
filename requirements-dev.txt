@@ -2,6 +2,7 @@ atomicwrites==1.1.5
 attrs==18.1.0
 certifi==2018.1.18
 chardet==3.0.4
+chtools==2.2.0
 deepdiff==3.3.0
 idna==2.6
 jsonpickle==0.9.6
@@ -13,6 +14,7 @@ pytest==3.6.3
 pytest-runner==4.2
 PyYAML==3.13
 requests==2.18.4
+requests-mock==1.5.2
 requests-toolbelt==0.8.0
 six==1.11.0
 tqdm==4.23.4
