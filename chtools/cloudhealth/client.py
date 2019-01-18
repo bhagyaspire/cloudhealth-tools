@@ -86,10 +86,10 @@ class HTTPClient:
 
 class CloudHealthClient:
 
-    def __init__(self, api_key, client_api_id=None):
+    def __init__(self, api_key, client_api_id=None, http_client=HTTPClient):
         self._api_key = api_key
         self._client_api_id = client_api_id
-        self._http_client = HTTPClient(
+        self._http_client = http_client(
                      DEFAULT_CLOUDHEALTH_API_URL,
                      api_key=api_key,
                      client_api_id=client_api_id
