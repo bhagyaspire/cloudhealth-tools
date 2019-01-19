@@ -63,6 +63,24 @@ def test_delete(mock_client):
 
 
 @patch('chtools.perspective.client.PerspectiveClient')
+def test_empty_archive(mock_client):
+    mock_client.return_value.index.return_value = {
+        '2954937502949': {'name': 'test1', 'active': False},
+        '2954937502950': {'name': 'test2', 'active': False}
+    }
+    mock_client.return_value.delete.return_value = True
+
+    args = ['empty-archive']
+    handler = PerspectiveCliHandler(
+        args,
+        'fake_api_key',
+        client=mock_client
+    )
+    handler.execute()
+    assert handler._results == "Deleted Perspective test1\nDeleted Perspective test2"
+
+
+@patch('chtools.perspective.client.PerspectiveClient')
 def test_get_schema(mock_client):
     perspective = Perspective(None)
     perspective.schema = {'name': 'mocked'}

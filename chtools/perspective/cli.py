@@ -58,7 +58,7 @@ class PerspectiveCliHandler(CliHandler):
         return results
 
     def _delete(self):
-        self._client.(self._args.name)
+        self._client.delete(self._args.name)
         results = (
             "Deleted Perspective {}".format(self._args.name)
         )
@@ -66,11 +66,13 @@ class PerspectiveCliHandler(CliHandler):
 
     def _empty_archive(self):
         index = self._client.index(active=False)
+        deleted_perspectives = []
         for perspective_id, perspective_info in index.items():
             self._client.delete(perspective_id)
-            logger.info(
+            deleted_perspectives.append(
                 "Deleted Perspective {}".format(perspective_info['name'])
             )
+        return "\n".join(deleted_perspectives)
 
     def _get_schema(self):
         perspective = self._client.get(self._args.name)
