@@ -138,3 +138,27 @@ def test_get_spec(mock_client):
     )
     handler.execute()
     assert handler._results == perspective.spec
+
+
+@patch('chtools.perspective.client.PerspectiveClient')
+def test_list(mock_client):
+    mock_client.return_value.index.return_value = {
+        '2954937501756': {'name': 'BCT - Accounts by Billing Account', 'active': True},
+        '343598849467': {'name': 'BCT Customers', 'active': True},
+        '2954937502951': {'name': 'test1', 'active': False}
+    }
+
+    args = ['list']
+    handler = PerspectiveCliHandler(
+        args,
+        'fake_api_key',
+        client=mock_client
+    )
+    handler.execute()
+    assert handler._results == (
+        "NAME                              ID              ACTIVE\n"
+        "-----                             -----           -----\n"
+        "BCT - Accounts by Billing Accoun  2954937501756   True\n"
+        "BCT Customers                     343598849467    True\n"
+        "test1                             2954937502951   False"
+    )

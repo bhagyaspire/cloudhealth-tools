@@ -158,8 +158,13 @@ class PerspectiveCliHandler(CliHandler):
 
                 )
             )
+
+        formatted_lines = []
         for line in perspective_list:
-            print('{0:<33} {1:<15} {2}'.format(*line))
+            formatted_lines.append('{0:<33} {1:<15} {2}'.format(*line))
+
+        results = "\n".join(formatted_lines)
+        return results
 
     @staticmethod
     def _read_schema_file(file_path):
