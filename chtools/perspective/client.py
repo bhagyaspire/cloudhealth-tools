@@ -99,18 +99,32 @@ class PerspectiveClient(CloudHealthClient):
 
         perspective_input can be name or id
         """
-        perspective = self.get(perspective_input)
-        perspective_name = perspective.name
-        logger.warning(
-            "Both schema and spec were provided, will just use schema"
-        )
-        if schema or spec:
-            name = schema['name'] if schema.get('name') else spec['name']
-            if perspective_name != name:
-                raise RuntimeError(
-                    "perspective_name {} does not match name {} in provided "
-                    "schema or spec".format(perspective_name, name)
-                )
+        if not schema and not spec:
+            raise ValueError(
+                "Must provide either schema or spec"
+            )
 
-        perspective.update_cloudhealth(schema)
+        if schema and spec:
+            raise ValueError(
+                "must provide schema or spec, not both"
+            )
+
+        perspective = self.get(perspective_input)
+
+        if schema:
+            if schema['name'] != perspective.name:
+                raise ValueError(
+                    "perspective_name {} does not match name {} in provided "
+                    "schema or spec".format(schema['name'], perspective.name)
+                )
+            perspective.schema = schema
+        else:
+            if spec['name'] != perspective.name:
+                raise ValueError(
+                    "perspective_name {} does not match name {} in provided "
+                    "schema or spec".format(spec['name'], perspective.name)
+                )
+            perspective.spec = spec
+
+        perspective.update_cloudhealth()
         return perspective

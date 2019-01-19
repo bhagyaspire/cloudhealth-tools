@@ -1,5 +1,4 @@
-import json
-
+import pytest
 import requests_mock
 
 from chtools.perspective.client import PerspectiveClient
@@ -250,8 +249,71 @@ def test_update():
             ]
         )
         # Returns a Perspective object
-        perspective = client.update('tag_filter')
+        perspective = client.update('tag_filter',
+                                    schema=get_schema_mock_response_updated['schema'])
 
     rules = perspective.schema['rules']
 
     assert len(rules) == 4
+
+
+def test_update_mismatch_name():
+    client = PerspectiveClient('fake_api_key')
+
+    index_mock_response = {
+        '2954937501756': {
+            'name': 'BCT - Accounts by Billing Account', 'active': True
+        },
+        '343598849467': {
+            'name': 'BCT Customers', 'active': True
+        },
+        '2954937502943': {
+            'name': 'tag_filter', 'active': True
+        }
+    }
+
+    get_schema_mock_response_inital = {
+        'schema': {'name': 'tag_filter', 'include_in_reports': 'true',
+                   'rules': [{'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634084', 'condition': {'clauses': [
+                           {'tag_field': ['Env'], 'op': '=', 'val': 'Dev'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634085', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Stage'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634086', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Prod'}]}}], 'merges': [],
+                   'constants': [{'type': 'Static Group', 'list': [
+                       {'ref_id': '2954937634084', 'name': 'Dev'},
+                       {'ref_id': '2954937634085', 'name': 'Stage'},
+                       {'ref_id': '2954937634086', 'name': 'Prod'},
+                       {'ref_id': '2954937634083', 'name': 'Other',
+                        'is_other': 'true'}]}]}}
+
+    updated_schema = {
+                'name': 'empty_schema',
+                'merges': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
+
+    with requests_mock.Mocker() as m:
+        m.get('https://chapi.cloudhealthtech.com/v1/perspective_schemas/',
+              json=index_mock_response)
+        m.get('https://chapi.cloudhealthtech.com/v1/perspective_schemas/2954937502943',
+              json=get_schema_mock_response_inital)
+        with pytest.raises(ValueError) as e:
+            client.update('tag_filter', schema=updated_schema)
+        assert str(e.value) == "perspective_name empty_schema does not match name tag_filter in provided schema or spec"
+
+
