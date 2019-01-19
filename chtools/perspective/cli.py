@@ -58,11 +58,11 @@ class PerspectiveCliHandler(CliHandler):
         return results
 
     def _delete(self):
-        perspective = self._client.get(self._args.name)
-        perspective.delete()
-        logger.info(
+        self._client.(self._args.name)
+        results = (
             "Deleted Perspective {}".format(self._args.name)
         )
+        return results
 
     def _empty_archive(self):
         index = self._client.index(active=False)

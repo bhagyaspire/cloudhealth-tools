@@ -38,6 +38,30 @@ def test_create_with_name():
         )
 
 
+def test_create_with_spec_and_schema():
+    args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml',
+            '--schema-file', 'tests/schemas/tag_filter.json']
+    with pytest.raises(RuntimeError):
+        PerspectiveCliHandler(
+            args,
+            'fake_api_key'
+        )
+
+
+@patch('chtools.perspective.client.PerspectiveClient')
+def test_delete(mock_client):
+    mock_client.return_value.delete.return_value = True
+
+    args = ['delete', '--name', 'tag_filter']
+    handler = PerspectiveCliHandler(
+        args,
+        'fake_api_key',
+        client=mock_client
+    )
+    handler.execute()
+    assert handler._results == "Deleted Perspective tag_filter"
+
+
 @patch('chtools.perspective.client.PerspectiveClient')
 def test_get_schema(mock_client):
     perspective = Perspective(None)
