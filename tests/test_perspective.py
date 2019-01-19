@@ -1,3 +1,5 @@
+import json
+
 import requests_mock
 
 from chtools.perspective.client import PerspectiveClient
@@ -164,4 +166,92 @@ def test_index():
     assert result.get('2954937501756')
 
 
+def test_update():
+    client = PerspectiveClient('fake_api_key')
 
+    index_mock_response = {
+        '2954937501756': {
+            'name': 'BCT - Accounts by Billing Account', 'active': True
+        },
+        '343598849467': {
+            'name': 'BCT Customers', 'active': True
+        },
+        '2954937502943': {
+            'name': 'tag_filter', 'active': True
+        }
+    }
+
+    get_schema_mock_response_inital = {
+        'schema': {'name': 'tag_filter', 'include_in_reports': 'true',
+                   'rules': [{'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634084', 'condition': {'clauses': [
+                           {'tag_field': ['Env'], 'op': '=', 'val': 'Dev'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634085', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Stage'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634086', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Prod'}]}}], 'merges': [],
+                   'constants': [{'type': 'Static Group', 'list': [
+                       {'ref_id': '2954937634084', 'name': 'Dev'},
+                       {'ref_id': '2954937634085', 'name': 'Stage'},
+                       {'ref_id': '2954937634086', 'name': 'Prod'},
+                       {'ref_id': '2954937634083', 'name': 'Other',
+                        'is_other': 'true'}]}]}}
+
+    update_schema_mock_response = {
+        'message': 'Perspective 2954937502943 updated'
+    }
+
+    get_schema_mock_response_updated = {
+        'schema': {'name': 'tag_filter', 'include_in_reports': 'true',
+                   'rules': [{'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634088',
+                              'condition': {'combine_with': 'OR', 'clauses': [
+                                  {'tag_field': ['Env'], 'op': '=',
+                                   'val': 'Dev'},
+                                  {'tag_field': ['Env'], 'op': '=',
+                                   'val': 'Test'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634089', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Stage'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634090', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'Prod'}]}},
+                             {'type': 'filter', 'asset': 'AwsAsset',
+                              'to': '2954937634091', 'condition': {'clauses': [
+                                 {'tag_field': ['Env'], 'op': '=',
+                                  'val': 'DR'}]}}], 'merges': [],
+                   'constants': [{'type': 'Static Group', 'list': [
+                       {'ref_id': '2954937634088', 'name': 'Dev'},
+                       {'ref_id': '2954937634089', 'name': 'Stage'},
+                       {'ref_id': '2954937634090', 'name': 'Prod'},
+                       {'ref_id': '2954937634091', 'name': 'DR'},
+                       {'ref_id': '2954937634087', 'name': 'Other',
+                        'is_other': 'true'}]}]}}
+
+    with requests_mock.Mocker() as m:
+        m.get('https://chapi.cloudhealthtech.com/v1/perspective_schemas/',
+              json=index_mock_response)
+        m.put('https://chapi.cloudhealthtech.com/v1/perspective_schemas/2954937502943',
+               json=update_schema_mock_response)
+        m.register_uri(
+            'GET',
+            'https://chapi.cloudhealthtech.com/v1/perspective_schemas/2954937502943',
+            [
+                {'json': get_schema_mock_response_inital,
+                 'status_code': 200},
+                {'json': get_schema_mock_response_updated,
+                 'status_code': 200}
+            ]
+        )
+        # Returns a Perspective object
+        perspective = client.update('tag_filter')
+
+    rules = perspective.schema['rules']
+
+    assert len(rules) == 4

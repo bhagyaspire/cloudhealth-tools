@@ -1,4 +1,4 @@
-name: tag_filter_update
+name: tag_filter
 include_in_reports: 'true'
 rules:
 - type: filter
