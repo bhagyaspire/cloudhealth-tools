@@ -14,6 +14,7 @@ class CliHandler(ABC):
         self._client_api_id = client_api_id
         self._client = client(api_key, client_api_id=None)
         self._log_level = log_level
+        self._results = None
 
     def execute(self):
         logger = logging.getLogger(__name__)
@@ -24,7 +25,8 @@ class CliHandler(ABC):
         action_name = self._args.action.replace('-', '_')
         method_name = '_{}'.format(action_name)
         method = getattr(self, method_name)
-        method()
+        self._results = method()
+        print(self._results)
 
     @abstractmethod
     def _parse_args(self):

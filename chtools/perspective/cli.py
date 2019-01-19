@@ -48,13 +48,14 @@ class PerspectiveCliHandler(CliHandler):
             )
 
         perspective.update_cloudhealth()
-        logger.info(
+        results = (
             "Created Perspective {} "
             "(https://apps.cloudhealthtech.com/perspectives/{})".format(
                 perspective.name,
                 perspective.id
               )
         )
+        return results
 
     def _delete(self):
         perspective = self._client.get(self._args.name)
@@ -73,7 +74,8 @@ class PerspectiveCliHandler(CliHandler):
 
     def _get_schema(self):
         perspective = self._client.get(self._args.name)
-        print(json.dumps(perspective.schema, indent=4))
+        results = json.dumps(perspective.schema, indent=4)
+        return results
 
     def _get_spec(self):
         perspective = self._client.get(self._args.name)
