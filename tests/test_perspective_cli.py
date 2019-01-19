@@ -1,6 +1,8 @@
 import json
 from unittest.mock import patch
 
+import pytest
+
 from chtools.perspective.cli import PerspectiveCliHandler
 from chtools.perspective.data import Perspective
 
@@ -24,6 +26,16 @@ def test_create(mock_client, mock_perspective):
     )
     handler.execute()
     assert handler._results == "Created Perspective tag_filter (https://apps.cloudhealthtech.com/perspectives/1234567890)"
+
+
+def test_create_with_name():
+    args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml',
+            '--name', 'perspective_name']
+    with pytest.raises(RuntimeError):
+        PerspectiveCliHandler(
+            args,
+            'fake_api_key'
+        )
 
 
 @patch('chtools.perspective.client.PerspectiveClient')
