@@ -19,9 +19,9 @@ setup(name='chtools',
             'certifi==2018.1.18',
             'chardet==3.0.4',
             'idna==2.6',
-            'PyYAML==3.13',
-            'requests==2.18.4',
-            'urllib3==1.22'
+            'PyYAML==4.2b1',
+            'requests==2.20.0',
+            'urllib3==1.23'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
