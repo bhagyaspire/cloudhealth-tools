@@ -3,8 +3,6 @@ import logging
 
 import requests
 
-from chtools.lib.perspective import PerspectiveClient
-
 logger = logging.getLogger(__name__)
 
 DEFAULT_CLOUDHEALTH_API_URL = 'https://chapi.cloudhealthtech.com/'
@@ -57,7 +55,9 @@ class HTTPClient:
                 ('Request to {} failed! HTTP Error Code: {} '
                  'Response: {}').format(
                     url, response.status_code, response_message))
-        logger.debug(response.json())
+        logger.debug(
+            "Response: {}".format(response.json())
+        )
         return response.json()
 
     def delete(self, uri, params=None):
@@ -86,18 +86,14 @@ class HTTPClient:
         self.params = params
 
 
-class CloudHealth:
+class CloudHealthClient:
 
-    def __init__(self, api_key, client_api_id=None):
-        self._http_client = HTTPClient(DEFAULT_CLOUDHEALTH_API_URL,
-                                       api_key=api_key,
-                                       client_api_id=client_api_id)
-
-    def client(self, client_type):
-        if client_type == 'perspective':
-            return PerspectiveClient(self._http_client)
-        else:
-            raise ValueError('Unknown client_type')
-
-
+    def __init__(self, api_key, client_api_id=None, http_client=HTTPClient):
+        self._api_key = api_key
+        self._client_api_id = client_api_id
+        self._http_client = http_client(
+                     DEFAULT_CLOUDHEALTH_API_URL,
+                     api_key=api_key,
+                     client_api_id=client_api_id
+        )
 
