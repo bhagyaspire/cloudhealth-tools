@@ -128,3 +128,5 @@ class PerspectiveClient(CloudHealthClient):
 
         perspective.update_cloudhealth()
         return perspective
+
+

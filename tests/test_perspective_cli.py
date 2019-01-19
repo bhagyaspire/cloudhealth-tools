@@ -166,5 +166,20 @@ def test_list(mock_client):
     )
 
 
-# @patch('chtools.perspective.client.PerspectiveClient')
-# def test_update_via_spec(mock_client):
+@patch('chtools.perspective.client.PerspectiveClient')
+def test_update_via_spec(mock_client):
+    perspective = Perspective(None)
+    with open('tests/schemas/tag_filter_update.json') as schema_file:
+        perspective.schema = json.load(schema_file)
+    perspective.id = '1234567890'
+    mock_client.return_value.update.return_value = perspective
+
+    args = ['update', '--spec-file', 'tests/specs/tag_filter_update.yaml']
+    handler = PerspectiveCliHandler(
+        args,
+        'fake_api_key',
+        client=mock_client
+    )
+    handler.execute()
+    assert handler._results == "Updated Perspective tag_filter (https://apps.cloudhealthtech.com/perspectives/1234567890)"
+
