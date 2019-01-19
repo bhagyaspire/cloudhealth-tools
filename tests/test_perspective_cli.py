@@ -83,7 +83,20 @@ def test_empty_archive(mock_client):
 @patch('chtools.perspective.client.PerspectiveClient')
 def test_get_schema(mock_client):
     perspective = Perspective(None)
-    perspective.schema = {'name': 'mocked'}
+    perspective.schema = {
+                'name': 'mocked',
+                'merges': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
 
     mock_client.return_value.get.return_value = perspective
 
@@ -95,3 +108,33 @@ def test_get_schema(mock_client):
     )
     handler.execute()
     assert handler._results == json.dumps(perspective.schema, indent=4)
+
+
+@patch('chtools.perspective.client.PerspectiveClient')
+def test_get_spec(mock_client):
+    perspective = Perspective(None)
+    perspective.schema = {
+                'name': 'mocked',
+                'merges': [],
+                'constants': [{
+                            'list': [{
+                                'name': 'Other',
+                                'ref_id': '1234567890',
+                                'is_other': 'true'
+                            }],
+                            'type': 'Static Group'
+                        }],
+                'include_in_reports': 'true',
+                'rules': []
+            }
+
+    mock_client.return_value.get.return_value = perspective
+
+    args = ['get-spec', '--name', 'tag_filter']
+    handler = PerspectiveCliHandler(
+        args,
+        'fake_api_key',
+        client=mock_client
+    )
+    handler.execute()
+    assert handler._results == perspective.spec

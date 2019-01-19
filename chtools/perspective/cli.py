@@ -81,7 +81,8 @@ class PerspectiveCliHandler(CliHandler):
 
     def _get_spec(self):
         perspective = self._client.get(self._args.name)
-        print(perspective.spec)
+        results = perspective.spec
+        return results
 
     def _parse_args(self):
         parser = argparse.ArgumentParser(
