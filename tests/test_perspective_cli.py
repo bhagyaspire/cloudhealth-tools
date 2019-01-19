@@ -31,21 +31,23 @@ def test_create(mock_client, mock_perspective):
 def test_create_with_name():
     args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml',
             '--name', 'perspective_name']
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError) as e:
         PerspectiveCliHandler(
             args,
             'fake_api_key'
         )
+    assert str(e.value) == "Can not specify --name for create or update. Name will come from spec or schema file."
 
 
 def test_create_with_spec_and_schema():
     args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml',
             '--schema-file', 'tests/schemas/tag_filter.json']
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError) as e:
         PerspectiveCliHandler(
             args,
             'fake_api_key'
         )
+    assert str(e.value) == "You can specify --spec-file or --schema-file but not both."
 
 
 @patch('chtools.perspective.client.PerspectiveClient')
@@ -162,3 +164,7 @@ def test_list(mock_client):
         "BCT Customers                     343598849467    True\n"
         "test1                             2954937502951   False"
     )
+
+
+# @patch('chtools.perspective.client.PerspectiveClient')
+# def test_update_via_spec(mock_client):

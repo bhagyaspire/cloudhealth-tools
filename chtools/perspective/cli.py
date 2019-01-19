@@ -36,18 +36,16 @@ class PerspectiveCliHandler(CliHandler):
 
         if self._args.spec_file:
             spec = self._read_spec_file(self._args.spec_file)
-            perspective = self._client.create(spec['name'])
-            perspective.spec = spec
+            perspective = self._client.create(spec['name'], spec=spec)
         elif self._args.schema_file:
             schema = self._read_schema_file(self._args.schema_file)
-            perspective = self._client.create(schema['name'])
-            perspective.schema = schema
+            perspective = self._client.create(schema['name'], schema=schema)
         else:
             raise RuntimeError(
                 "Neither spec or schema are defined."
             )
 
-        perspective.update_cloudhealth()
+        # perspective.update_cloudhealth()
         results = (
             "Created Perspective {} "
             "(https://apps.cloudhealthtech.com/perspectives/{})".format(
@@ -181,22 +179,16 @@ class PerspectiveCliHandler(CliHandler):
     def _update(self):
         if self._args.spec_file:
             spec = self._read_spec_file(self._args.spec_file)
-            perspective = self._client.get(spec['name'])
-            perspective.spec = spec
-        elif self._args.schema_file:
-            schema = self._read_schema_file(self._args.schema_file)
-            perspective = self._client.get(schema['name'])
-            perspective.schema = schema
+            perspective = self._client.update(spec['name'], spec=spec)
         else:
-            raise RuntimeError(
-                "Neither spec or schema are defined."
-            )
+            schema = self._read_schema_file(self._args.schema_file)
+            perspective = self._client.update(schema['name'], schema=schema)
 
-        perspective.update_cloudhealth()
-        logger.info(
+        results = (
             "Updated Perspective {} "
             "(https://apps.cloudhealthtech.com/perspectives/{})".format(
                 perspective.name,
                 perspective.id
             )
         )
+        return results
