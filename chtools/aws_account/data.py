@@ -22,7 +22,7 @@ class AwsAccount:
             # sets the default "empty schema"
             self._schema = {
                     'id': None,
-                    'name': 'empty',
+                    'name': None,
                     'hide_public_fields': False,
                     'region': 'global',
                     'authentication': {
@@ -38,6 +38,45 @@ class AwsAccount:
                     'tags': []
                 }
 
+    @property
+    def amazon_name(self):
+        return self._schema.get('amazon_name')
+
+    @amazon_name.setter
+    def amazon_name(self, amazon_name):
+        self._schema['amazon_name'] = amazon_name
+        
+    @property
+    def assume_role_arn(self):
+        return self._schema.get('assume_role_arn')
+
+    @assume_role_arn.setter
+    def assume_role_arn(self, assume_role_arn):
+        self._schema['assume_role_arn'] = assume_role_arn
+
+    @property
+    def assume_role_external_id(self):
+        return self._schema['authentication'].get('assume_role_external_id')
+
+    def create(self):
+        if self.id:
+            raise RuntimeError(
+                'AwsAccount id must not be set. Use update_cloudhealth to '
+                'update an existing AwsAccount'
+            )
+
+        if not self.name:
+            raise RuntimeError(
+                'AwsAccount name must be set before it can be created in '
+                'CloudHealht'
+            )
+
+        self._schema['authentication'][
+            'assume_role_external_id'] = self._generate_external_id()
+        response = self._http_client.post(self._uri, self.schema)
+        self.schema = response
+        return response
+
     def delete(self):
         if not self._schema.get('id'):
             raise RuntimeError(
@@ -51,14 +90,38 @@ class AwsAccount:
         response = self._http_client.get(self._uri)
         self._schema = response
 
+    def _generate_external_id(self):
+        response = self._http_client.get(
+            'v1/aws_accounts/:id/generate_external_id'
+        )
+        return response['generated_external_id']
+
     @property
     def id(self):
         return self._schema.get('id')
 
     @id.setter
     def id(self, account_id):
-        self._schema['id'] = account_id
-        self._uri = self._uri + '/' + account_id
+        if self._schema.get('id'):
+            raise ValueError(
+                "Unable to change an AwsAccount Object's id. "
+                "Create a new object with the desired id."
+            )
+        else:
+            self._schema['id'] = account_id
+            self._uri = self._uri + '/' + account_id
+
+    @property
+    def name(self):
+        return self._schema.get('name')
+
+    @name.setter
+    def name(self, name):
+        self._schema['name'] = name
+        
+    @property
+    def owner_id(self):
+        return self._schema.get('owner_id')
 
     @property
     def schema(self):
@@ -74,3 +137,13 @@ class AwsAccount:
             self._uri = self._uri + '/' + str(self._schema['id'])
         if self._schema.get('_links'):
             del self._schema['_links']
+
+    def update_cloudhealth(self):
+        if self.id:
+            response = self._http_client.put(self._uri,
+                                             self._schema)
+            self.get_schema()
+        else:
+            raise RuntimeError(
+                'AwsAccount id must be set to update CloudHealth'
+            )

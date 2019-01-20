@@ -512,5 +512,5 @@ class Perspective:
         else:
             raise RuntimeError(
                 "Perspective Id must be set to update_cloudhealth a "
-                "perspective".format(self.id)
+                "perspective"
             )
