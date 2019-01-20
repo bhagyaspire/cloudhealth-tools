@@ -11,6 +11,12 @@ class AwsAccountClient(CloudHealthClient):
         super().__init__(api_key, client_api_id=client_api_id)
         self._uri = 'v1/aws_accounts/'
 
+    def delete(self, account_id):
+        aws_account = AwsAccount(self._http_client,
+                                 account_id=account_id)
+        aws_account.delete()
+        return aws_account
+
     def get_by_account_id(self, account_id):
         aws_account = AwsAccount(self._http_client,
                                  account_id=account_id)

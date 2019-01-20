@@ -17,7 +17,7 @@ class AwsAccount:
             self.id = account_id
             self.get_schema()
         elif schema:
-            self._schema = schema
+            self.schema = schema
         else:
             # sets the default "empty schema"
             self._schema = {
@@ -37,6 +37,14 @@ class AwsAccount:
                     'cloudwatch': {},
                     'tags': []
                 }
+
+    def delete(self):
+        if not self._schema.get('id'):
+            raise RuntimeError(
+                "account id must be specified to be able to delete"
+            )
+        response = self._http_client.delete(self._uri)
+        self._schema = {}
 
     def get_schema(self):
         """gets the latest schema from CloudHealth"""
@@ -62,3 +70,5 @@ class AwsAccount:
     @schema.setter
     def schema(self, schema_input):
         self._schema = schema_input
+        if self._schema.get('id'):
+            self._uri = self._uri + '/' + str(self._schema['id'])

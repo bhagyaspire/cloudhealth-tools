@@ -23,6 +23,23 @@ class AwsAccountCliHandler(CliHandler):
             log_level=log_level
         )
 
+    def _delete(self):
+        if self._args.owner_id:
+            aws_account = self._client.get_by_owner_id(self._args.owner_id)
+            account_info = "Owner Id {}".format(self._args.owner_id)
+        elif self._args.name:
+            aws_account = self._client.get_by_name(self._args.name)
+            account_info = "Name {}".format(self._args.name)
+        else:
+            aws_account = self._client.get_by_account_id(self._args.account_id)
+            account_info = "Account Id {}".format(self._args.account_id)
+
+        aws_account.delete()
+        results = (
+            "Deleted AWS Account {}".format(account_info)
+        )
+        return results
+
     def _get_schema(self):
 
         if self._args.account_id:
@@ -47,6 +64,7 @@ class AwsAccountCliHandler(CliHandler):
 
         parser.add_argument('action',
                             choices=[
+                                'delete',
                                 'get-schema',
                                 'help',
                                 'list'
