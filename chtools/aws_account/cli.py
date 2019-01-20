@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 
+import yaml
 
 from chtools.cli.handler import CliHandler
 from chtools.aws_account.client import AwsAccountClient
@@ -41,7 +42,6 @@ class AwsAccountCliHandler(CliHandler):
         return results
 
     def _get_schema(self):
-
         if self._args.account_id:
             aws_account = self._client.get_by_account_id(self._args.account_id)
         elif self._args.owner_id:
@@ -56,6 +56,11 @@ class AwsAccountCliHandler(CliHandler):
         results = json.dumps(aws_account.schema, indent=4)
         return results
 
+    def _get_spec(self):
+        schema = json.loads(self._get_schema())
+        results = yaml.dump(schema, default_flow_style=False)
+        return results
+
     def _parse_args(self):
         parser = argparse.ArgumentParser(
             description="Create and manage AWS Accounts",
@@ -66,6 +71,7 @@ class AwsAccountCliHandler(CliHandler):
                             choices=[
                                 'delete',
                                 'get-schema',
+                                'get-spec',
                                 'help',
                                 'list'
                             ],

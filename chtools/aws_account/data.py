@@ -72,3 +72,5 @@ class AwsAccount:
         self._schema = schema_input
         if self._schema.get('id'):
             self._uri = self._uri + '/' + str(self._schema['id'])
+        if self._schema.get('_links'):
+            del self._schema['_links']
