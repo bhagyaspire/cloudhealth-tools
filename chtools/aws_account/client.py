@@ -16,6 +16,26 @@ class AwsAccountClient(CloudHealthClient):
                                  account_id=account_id)
         return aws_account
 
+    def get_by_owner_id(self, owner_id):
+        aws_accounts = self.list()
+        aws_account = None
+        for schema in aws_accounts:
+            if schema.get('owner_id') == owner_id:
+                aws_account = AwsAccount(self._http_client,
+                                         schema=schema)
+                break
+        return aws_account
+
+    def get_by_name(self, name):
+        aws_accounts = self.list()
+        aws_account = None
+        for schema in aws_accounts:
+            if schema.get('name') == name:
+                aws_account = AwsAccount(self._http_client,
+                                         schema=schema)
+                break
+        return aws_account
+
     def list(self):
         # While the CloudHealth API has pagination, it does not provide any
         # indication that pagination is needed. We ask for a set page size,

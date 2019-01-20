@@ -27,6 +27,10 @@ class AwsAccountCliHandler(CliHandler):
 
         if self._args.account_id:
             aws_account = self._client.get_by_account_id(self._args.account_id)
+        elif self._args.owner_id:
+            aws_account = self._client.get_by_owner_id(self._args.owner_id)
+        elif self._args.name:
+            aws_account = self._client.get_by_name(self._args.name)
         else:
             raise ValueError(
                 "Arguments needed to get-schema not set."
@@ -84,4 +88,28 @@ class AwsAccountCliHandler(CliHandler):
         return args
 
     def _list(self):
-        return self._client.list()
+        account_list = [
+            ('Account Name', 'Amazon Name', 'Owner Id', 'Account Type', 'Status'),
+            ('------------', '-----------', '--------', '------------', '------')
+        ]
+        accounts = self._client.list()
+        for account in sorted(accounts, key=lambda a: a['name'].lower()):
+            account_list.append(
+                (
+                    account.get('name', ''),
+                    account.get('amazon_name', ''),
+                    account.get('owner_id', ''),
+                    account.get('account_type'),
+                    account['status'].get('level')
+                )
+            )
+
+        formatted_lines = []
+        for line in account_list:
+            formatted_lines.append(
+                '{0:<24} {1:<24} {2:<12} {3:<12} {4}'.format(*line)
+            )
+
+        results = "\n".join(formatted_lines)
+        return results
+
