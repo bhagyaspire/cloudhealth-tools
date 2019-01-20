@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 
+from chtools.aws_account.cli import AwsAccountCliHandler
 from chtools.perspective.cli import PerspectiveCliHandler
 
 logger = logging.getLogger('chtools')
@@ -17,6 +18,7 @@ def parse_args(arguments):
 
     parser.add_argument('service',
                         choices=[
+                            'aws-account',
                             'perspective',
                             'help'
                         ],
@@ -40,6 +42,7 @@ def parse_args(arguments):
 
 def service_to_handler(service_name):
     name_to_handler = {
+        'aws-account': AwsAccountCliHandler,
         'perspective': PerspectiveCliHandler
     }
     return name_to_handler[service_name]
