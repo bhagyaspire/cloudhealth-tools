@@ -78,3 +78,9 @@ class AwsAccountClient(CloudHealthClient):
                 break
 
         return aws_accounts
+
+    def update(self, schema):
+        aws_account = AwsAccount(self._http_client,
+                                 schema=schema)
+        aws_account.update_cloudhealth()
+        return aws_account

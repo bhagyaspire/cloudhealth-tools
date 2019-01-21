@@ -79,12 +79,20 @@ class AwsAccount:
         self.schema = response
         return response
 
+    @property
+    def dbr_bucket(self):
+        return self._schema['billing'].get('bucket')
+
+    @dbr_bucket.setter
+    def dbr_bucket(self, bucket_name):
+        self._schema['billing']['bucket'] = bucket_name
+
     def delete(self):
         if not self._schema.get('id'):
             raise RuntimeError(
                 "account id must be specified to be able to delete"
             )
-        response = self._http_client.delete(self._uri)
+        self._http_client.delete(self._uri)
         self._schema = {}
 
     def get_schema(self):

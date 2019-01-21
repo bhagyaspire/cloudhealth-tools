@@ -51,40 +51,47 @@ class AwsAccountCliHandler(CliHandler):
         return results
 
     def _delete(self):
-        if self._args.owner_id:
+        aws_account = self._get_aws_account()
+        account_name = aws_account.name
+        aws_account.delete()
+        results = (
+            "Deleted AWS Account {}".format(account_name)
+        )
+        return results
+
+    def _get_aws_account(self):
+        if self._args.account_id:
+            aws_account = self._client.get_by_account_id(self._args.account_id)
+            account_info = "Account Id {}".format(self._args.account_id)
+        elif self._args.owner_id:
             aws_account = self._client.get_by_owner_id(self._args.owner_id)
             account_info = "Owner Id {}".format(self._args.owner_id)
         elif self._args.name:
             aws_account = self._client.get_by_name(self._args.name)
             account_info = "Name {}".format(self._args.name)
         else:
-            aws_account = self._client.get_by_account_id(self._args.account_id)
-            account_info = "Account Id {}".format(self._args.account_id)
-
-        aws_account.delete()
-        results = (
-            "Deleted AWS Account {}".format(account_info)
-        )
-        return results
-
-    def _get_schema(self):
-        if self._args.account_id:
-            aws_account = self._client.get_by_account_id(self._args.account_id)
-        elif self._args.owner_id:
-            aws_account = self._client.get_by_owner_id(self._args.owner_id)
-        elif self._args.name:
-            aws_account = self._client.get_by_name(self._args.name)
-        else:
             raise ValueError(
                 "Arguments needed to get-schema not set."
             )
 
+        if aws_account.schema:
+            results = aws_account
+        else:
+            raise RuntimeError(
+                "unable to retrieve schema for AWS Account {}".format(
+                    account_info
+                )
+            )
+        return results
+
+    def _get_schema(self):
+        aws_account = self._get_aws_account()
         results = json.dumps(aws_account.schema, indent=4)
         return results
 
     def _get_spec(self):
-        schema = json.loads(self._get_schema())
-        results = yaml.dump(schema, default_flow_style=False)
+        aws_account = json.loads(self._get_schema())
+        results = yaml.dump(aws_account.schema, default_flow_style=False)
         return results
 
     def _parse_args(self):
@@ -100,7 +107,8 @@ class AwsAccountCliHandler(CliHandler):
                                 'get-schema',
                                 'get-spec',
                                 'help',
-                                'list'
+                                'list',
+                                'update'
                             ],
                             help='Account action to take.')
 
@@ -166,13 +174,14 @@ class AwsAccountCliHandler(CliHandler):
                 raise ValueError(
                     "Must specify --account-id, --owner-id or --name"
                 )
-            if sum([bool(args.account_id),
-                    bool(args.owner_id),
-                    bool(args.name)]) > 1:
-                raise ValueError(
-                    "Only --account-id, --owner-id or --name can be "
-                    "specified. You can not specify more than one."
-                )
+            if args.action in ['get-schema', 'get-spec', 'update']:
+                if sum([bool(args.account_id),
+                        bool(args.owner_id),
+                        bool(args.name)]) > 1:
+                    raise ValueError(
+                        "Only --account-id, --owner-id or --name can be "
+                        "specified. You can not specify more than one."
+                    )
         if args.action in ['create', 'update']:
             if args.spec_file and args.schema_file:
                 raise ValueError(
@@ -229,5 +238,30 @@ class AwsAccountCliHandler(CliHandler):
             )
 
         results = "\n".join(formatted_lines)
+        return results
+
+    def _update(self):
+        if self._args.schema_file:
+            schema = read_schema_file(self._args.schema_file)
+        elif self._args.spec_file:
+            schema = read_spec_file(self._args.spec_file)
+        else:
+            aws_account = self._get_aws_account()
+            if self._args.assume_role_arn:
+                aws_account.assume_role_arn = self._args.assume_role_arn
+            if self._args.dbr_bucket:
+                aws_account.dbr_bucket = self._args.dbr_bucket
+            if self._args.name:
+                aws_account.name = self._args.name
+            schema = aws_account.schema
+
+        aws_account = self._client.update(schema)
+        results = (
+            "Updated AWS Account {} "
+            "(https://apps.cloudhealthtech.com/aws_accounts/{}/edit)".format(
+                aws_account.name,
+                aws_account.id
+            )
+        )
         return results
 
