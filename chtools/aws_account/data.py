@@ -2,6 +2,24 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+NEW_ACCOUNT_SCHEMA = {
+                    'name': None,
+                    'hide_public_fields': False,
+                    'region': 'global',
+                    'authentication': {
+                        'protocol': 'assume_role',
+                        'assume_role_arn': None
+                    },
+                    'billing': {
+                        "bucket": None
+                    },
+                    'cloudtrail': {},
+                    'ecs': {},
+                    'aws_config': {},
+                    'cloudwatch': {},
+                    'tags': []
+                    }
+
 
 class AwsAccount:
     # Note account_id is the CloudHealth ID and not the AWS Account ID
@@ -20,23 +38,7 @@ class AwsAccount:
             self.schema = schema
         else:
             # sets the default "empty schema"
-            self._schema = {
-                    'id': None,
-                    'name': None,
-                    'hide_public_fields': False,
-                    'region': 'global',
-                    'authentication': {
-                        'protocol': 'assume_role',
-                        'assume_role_arn': None,
-                        'assume_role_external_id': None
-                    },
-                    'billing': {},
-                    'cloudtrail': {},
-                    'ecs': {},
-                    'aws_config': {},
-                    'cloudwatch': {},
-                    'tags': []
-                }
+            self._schema = NEW_ACCOUNT_SCHEMA
 
     @property
     def amazon_name(self):

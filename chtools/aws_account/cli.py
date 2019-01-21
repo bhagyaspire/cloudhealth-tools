@@ -7,7 +7,9 @@ import sys
 import yaml
 
 from chtools.cli.handler import CliHandler
+from chtools.cli.file import read_spec_file, read_schema_file
 from chtools.aws_account.client import AwsAccountClient
+from chtools.aws_account.data import NEW_ACCOUNT_SCHEMA
 
 
 class AwsAccountCliHandler(CliHandler):
@@ -23,6 +25,30 @@ class AwsAccountCliHandler(CliHandler):
             client=client,
             log_level=log_level
         )
+
+    def _create(self):
+        if self._args.schema_file:
+            schema = read_schema_file(self._args.schema_file)
+        elif self._args.spec_file:
+            schema = read_spec_file(self._args.spec_file)
+        else:
+            schema = dict(NEW_ACCOUNT_SCHEMA)
+            schema['name'] = self._args.name
+            if self._args.assume_role_arn:
+                schema['authentication'][
+                    'assume_role_arn'] = self._args.assume_role_arn
+            if self._args.dbr_bucket:
+                schema['billing']['bucket'] = self._args.dbr_bucket
+
+        aws_account = self._client.create(schema)
+        results = (
+            "Created AWS Account {} "
+            "(https://apps.cloudhealthtech.com/aws_accounts/{}/edit)".format(
+                aws_account.name,
+                aws_account.id
+            )
+        )
+        return results
 
     def _delete(self):
         if self._args.owner_id:
@@ -69,6 +95,7 @@ class AwsAccountCliHandler(CliHandler):
 
         parser.add_argument('action',
                             choices=[
+                                'create',
                                 'delete',
                                 'get-schema',
                                 'get-spec',
@@ -76,24 +103,41 @@ class AwsAccountCliHandler(CliHandler):
                                 'list'
                             ],
                             help='Account action to take.')
-        parser.add_argument('--name',
-                            help="Name of the AWS Account to interact with. "
-                                 "Name for create or update will come from the"
-                                 " spec or schema file. "
-                                 "Can not specify with --account-id "
-                                 "or --owner-id"
-                            )
+
         parser.add_argument('--account-id',
                             help="CloudHealth Account Id for the AWS Account "
                                  "to interact with. "
                                  "Can not specify with --name "
-                                 "or --owner-id"
+                                 "or --owner-id."
+                            )
+        parser.add_argument('--assume-role-arn',
+                            help="The ARN of the role that account should "
+                                 "use to connect to the AWS Account"
+                            )
+        parser.add_argument('--dbr-bucket',
+                            help="The name of the bucket used to store "
+                                 "the DBR reports."
+                            )
+        parser.add_argument('--name',
+                            help="Name of the AWS Account to interact with. "
+                                 "Can not specify with --account-id "
+                                 "or --owner-id when getting schema or spec. "
+                                 "Specifying name with create or update with "
+                                 "change the accounts name."
                             )
         parser.add_argument('--owner-id',
                             help="AWS Account Id for the AWS Account "
                                  "to interact with. "
                                  "Can not specify with --name "
-                                 "or --account-id"
+                                 "or --account-id."
+                            )
+        parser.add_argument('--spec-file',
+                            help="Path to the YAML spec file to create "
+                                 "or update an AWS Account."
+                            )
+        parser.add_argument('--schema-file',
+                            help="Path to the JSON spec file to create "
+                                 "or update an AWS Account."
                             )
 
         args = parser.parse_args(args=self._args_list)
@@ -101,13 +145,63 @@ class AwsAccountCliHandler(CliHandler):
             parser.print_help()
             sys.exit(0)
 
-        if sum([bool(args.account_id),
-                bool(args.owner_id),
-                bool(args.name)]) > 1:
-            raise ValueError(
-                "Only --account-id, --owner-id or --name can be specified. "
-                "You can not specify more than one."
-            )
+        if args.action in ['get-schema', 'get-spec']:
+            if args.assume_role_arn:
+                raise ValueError(
+                    '--assume-role-arn not accepted for {}'.format(args.action)
+                )
+            if args.dbr_bucket:
+                raise ValueError(
+                    '--dbr-bucket not accepted for {}'.format(args.action)
+                )
+            if args.spec_file:
+                raise ValueError(
+                    '--spec-file not accepted for {}'.format(args.action)
+                )
+            if args.schema_file:
+                raise ValueError(
+                    '--schema-file not accepted for {}'.format(args.action)
+                )
+            if not args.account_id and not args.owner_id and not args.name:
+                raise ValueError(
+                    "Must specify --account-id, --owner-id or --name"
+                )
+            if sum([bool(args.account_id),
+                    bool(args.owner_id),
+                    bool(args.name)]) > 1:
+                raise ValueError(
+                    "Only --account-id, --owner-id or --name can be "
+                    "specified. You can not specify more than one."
+                )
+        if args.action in ['create', 'update']:
+            if args.spec_file and args.schema_file:
+                raise ValueError(
+                    "May only specify --spec-file or --schema-file not both."
+                )
+            if ((args.name or args.assume_role_arn or args.dbr_bucket)
+                    and (args.spec_file or args.schema_file)):
+                raise ValueError(
+                    "Can not specify --name, --assume-role-arn or "
+                    "--dbr-bucket along with --spec-file or --schema-file"
+                )
+        if args.action in ['create']:
+            if args.account_id:
+                raise ValueError(
+                    '--account-id not accepted for {}'.format(args.action)
+                )
+            if args.owner_id:
+                raise ValueError(
+                    '--owner-id not accepted for {}'.format(args.action)
+                )
+        if args.action in ['update']:
+            if (not args.name and not args.assume_role_arn
+                    and not args.dbr_bucket and not args.spec_file
+                    and not args.schema_file):
+                raise ValueError(
+                    "Must specify --spec-file or --schema-file or at least "
+                    "one of the following: --name, --assume-role-arn or "
+                    "--dbr-bucket along"
+                )
 
         return args
 

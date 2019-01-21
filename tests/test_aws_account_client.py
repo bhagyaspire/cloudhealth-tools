@@ -1,4 +1,3 @@
-import pytest
 import requests_mock
 
 from chtools.aws_account.client import AwsAccountClient
