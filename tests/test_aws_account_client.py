@@ -142,3 +142,20 @@ def test_get_spec_by_name():
     assert results.owner_id == '619288149268'
 
 
+def test_update(mock_schema_response):
+    client = AwsAccountClient('fake_api_key')
+
+    with requests_mock.Mocker() as m:
+        m.put(
+            'https://chapi.cloudhealthtech.com/v1/aws_accounts/5909874999458',
+            json=mock_schema_response
+        )
+        m.get(
+            'https://chapi.cloudhealthtech.com/v1/aws_accounts/5909874999458',
+            json=mock_schema_response
+        )
+
+        results = client.update(mock_schema_response)
+
+    assert results.id == 5909874999458
+

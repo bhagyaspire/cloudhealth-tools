@@ -170,18 +170,18 @@ class AwsAccountCliHandler(CliHandler):
                 raise ValueError(
                     '--schema-file not accepted for {}'.format(args.action)
                 )
+        if args.action in ['get-schema', 'get-spec', 'update']:
             if not args.account_id and not args.owner_id and not args.name:
                 raise ValueError(
                     "Must specify --account-id, --owner-id or --name"
                 )
-            if args.action in ['get-schema', 'get-spec', 'update']:
-                if sum([bool(args.account_id),
-                        bool(args.owner_id),
-                        bool(args.name)]) > 1:
-                    raise ValueError(
-                        "Only --account-id, --owner-id or --name can be "
-                        "specified. You can not specify more than one."
-                    )
+            if sum([bool(args.account_id),
+                    bool(args.owner_id),
+                    bool(args.name)]) > 1:
+                raise ValueError(
+                    "Only --account-id, --owner-id or --name can be "
+                    "specified. You can not specify more than one."
+                )
         if args.action in ['create', 'update']:
             if args.spec_file and args.schema_file:
                 raise ValueError(
