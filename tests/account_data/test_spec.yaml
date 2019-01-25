@@ -1,0 +1,6 @@
+name: bcttest1
+authentication:
+  assume_role_arn: arn:aws:iam::619288149268:role/CloudHealth
+  protocol: assume_role
+billing:
+  bucket: ch-test-bucket
