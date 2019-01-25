@@ -3,6 +3,55 @@ import requests_mock
 from chtools.aws_account.client import AwsAccountClient
 
 
+def test_create():
+    client = AwsAccountClient('fake_api_key')
+
+    mock_generated_external_id_response = {
+        'generated_external_id': '27beaf0b252df5700240e09ea7e96d'
+    }
+
+    mock_response_schema = {'id': 5909875000670, 'name': 'test_create',
+                            'hide_public_fields': False, 'region': 'global',
+                            'created_at': '2019-01-25T01:06:25Z',
+                            'updated_at': '2019-01-25T01:06:25Z',
+                            'account_type': 'Unknown',
+                            'status': {'level': 'unknown'},
+                            'authentication': {'protocol': 'assume_role',
+                                               'assume_role_arn': 'arn:aws:iam::619288149268:role/CloudHealth',
+                                               'assume_role_external_id': '27beaf0b252df5700240e09ea7e96d'},
+                            'billing': {'bucket': 'ch-dbr-bucket',
+                                        'is_consolidated': False},
+                            'cloudtrail': {'enabled': False},
+                            'ecs': {'enabled': False},
+                            'aws_config': {'enabled': False},
+                            'cloudwatch': {'enabled': True}, 'tags': []}
+
+    account_schema = {
+        'name': 'test_create',
+        'authentication': {
+            'protocol': 'assume_role',
+            'assume_role_arn': 'arn:aws:iam::619288149268:role/CloudHealth'
+        },
+        'billing': {
+            "bucket": 'ch-dbr-bucket'
+        }
+        }
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            'https://chapi.cloudhealthtech.com/v1/aws_accounts/:id/generate_external_id',
+            json=mock_generated_external_id_response
+        )
+        m.post(
+            'https://chapi.cloudhealthtech.com/v1/aws_accounts',
+            json=mock_response_schema
+        )
+
+        results = client.create(account_schema)
+
+    assert results.id == 5909875000670
+
+
 def test_get_spec_by_account_id():
     client = AwsAccountClient('fake_api_key')
 
@@ -29,7 +78,7 @@ def test_get_spec_by_account_id():
     with requests_mock.Mocker() as m:
         m.get(
             'https://chapi.cloudhealthtech.com/v1/aws_accounts/5909874999458',
-              json=mock_schema
+            json=mock_schema
         )
         results = client.get_by_account_id('5909874999458')
 
@@ -80,3 +129,5 @@ def test_get_spec_by_name():
         results = client.get_by_name('bctlinktest1')
 
     assert results.owner_id == '619288149268'
+
+
