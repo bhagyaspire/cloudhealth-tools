@@ -8,6 +8,7 @@ import yaml
 
 from chtools.cli.handler import CliHandler
 from chtools.perspective.client import PerspectiveClient
+from chtools.cli.file import read_schema_file, read_spec_file
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +36,10 @@ class PerspectiveCliHandler(CliHandler):
             )
 
         if self._args.spec_file:
-            spec = self._read_spec_file(self._args.spec_file)
+            spec = read_spec_file(self._args.spec_file)
             perspective = self._client.create(spec['name'], spec=spec)
         elif self._args.schema_file:
-            schema = self._read_schema_file(self._args.schema_file)
+            schema = read_schema_file(self._args.schema_file)
             perspective = self._client.create(schema['name'], schema=schema)
         else:
             raise RuntimeError(
@@ -85,6 +86,7 @@ class PerspectiveCliHandler(CliHandler):
     def _parse_args(self):
         parser = argparse.ArgumentParser(
             description="Create and manage perspectives",
+            prog="chtools perspective",
             add_help=False
         )
 
@@ -178,10 +180,10 @@ class PerspectiveCliHandler(CliHandler):
 
     def _update(self):
         if self._args.spec_file:
-            spec = self._read_spec_file(self._args.spec_file)
+            spec = read_spec_file(self._args.spec_file)
             perspective = self._client.update(spec['name'], spec=spec)
         else:
-            schema = self._read_schema_file(self._args.schema_file)
+            schema = read_schema_file(self._args.schema_file)
             perspective = self._client.update(schema['name'], schema=schema)
 
         results = (

@@ -18,7 +18,7 @@ def test_create(mock_client, mock_perspective):
     mock_client.return_value.check_exists.return_value = False
     mock_client.return_value.create.return_value = perspective
 
-    args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml']
+    args = ['create', '--spec-file', 'tests/perspective_data/specs/tag_filter.yaml']
     handler = PerspectiveCliHandler(
         args,
         'fake_api_key',
@@ -29,7 +29,7 @@ def test_create(mock_client, mock_perspective):
 
 
 def test_create_with_name():
-    args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml',
+    args = ['create', '--spec-file', 'tests/perspective_data/specs/tag_filter.yaml',
             '--name', 'perspective_name']
     with pytest.raises(RuntimeError) as e:
         PerspectiveCliHandler(
@@ -40,8 +40,8 @@ def test_create_with_name():
 
 
 def test_create_with_spec_and_schema():
-    args = ['create', '--spec-file', 'tests/specs/tag_filter.yaml',
-            '--schema-file', 'tests/schemas/tag_filter.json']
+    args = ['create', '--spec-file', 'tests/perspective_data/specs/tag_filter.yaml',
+            '--schema-file', 'tests/perspective_data/schemas/tag_filter.json']
     with pytest.raises(RuntimeError) as e:
         PerspectiveCliHandler(
             args,
@@ -169,12 +169,12 @@ def test_list(mock_client):
 @patch('chtools.perspective.client.PerspectiveClient')
 def test_update_via_spec(mock_client):
     perspective = Perspective(None)
-    with open('tests/schemas/tag_filter_update.json') as schema_file:
+    with open('tests/perspective_data/schemas/tag_filter_update.json') as schema_file:
         perspective.schema = json.load(schema_file)
     perspective.id = '1234567890'
     mock_client.return_value.update.return_value = perspective
 
-    args = ['update', '--spec-file', 'tests/specs/tag_filter_update.yaml']
+    args = ['update', '--spec-file', 'tests/perspective_data/specs/tag_filter_update.yaml']
     handler = PerspectiveCliHandler(
         args,
         'fake_api_key',

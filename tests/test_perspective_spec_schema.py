@@ -13,8 +13,8 @@ logger.setLevel(logging.DEBUG)
 
 path = os.path.abspath(__file__)
 dir_path = os.path.dirname(path)
-specs_dir = dir_path + "/specs"
-schemas_dir = dir_path + "/schemas"
+specs_dir = dir_path + "/perspective_data/specs"
+schemas_dir = dir_path + "/perspective_data/schemas"
 
 # general_test_cases are for test cases to convert both ways between
 # schema and spec

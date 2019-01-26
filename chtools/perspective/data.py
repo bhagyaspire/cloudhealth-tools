@@ -9,9 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 class Perspective:
-    # MVP requires the full schema for all operations
-    # i.e. changing the perspectives name requires submitting a full schema
-    # with just the name changed.
     def __init__(self, http_client, perspective_id=None):
         # Used to generate ref_id's for new groups.
         self._new_ref_id = 100
@@ -492,20 +489,15 @@ class Perspective:
             else:
                 self._spec_rule_to_schema(rule)
 
-    def update_cloudhealth(self, schema=None):
+    def update_cloudhealth(self):
         """Updates cloud with objects state or with provided schema"""
-        if schema:
-            perspective_schema = schema
-        else:
-            perspective_schema = self.schema
-
         if self.id:
             # Dynamic Group constants are created and maintained by
             # CloudHealth. They should be stripped from the schema prior to
             # submitting them to the API.
 
             # create copy of schema dict with and then change copy
-            schema_data = {'schema': dict(perspective_schema)}
+            schema_data = {'schema': dict(self.schema)}
             schema_data['schema']['constants'] = [
                 constant for constant in schema_data['schema']['constants']
                 if constant['type'] != 'Dynamic Group'
@@ -520,5 +512,5 @@ class Perspective:
         else:
             raise RuntimeError(
                 "Perspective Id must be set to update_cloudhealth a "
-                "perspective".format(self.id)
+                "perspective"
             )
