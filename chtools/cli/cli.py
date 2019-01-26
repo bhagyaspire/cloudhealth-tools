@@ -13,6 +13,7 @@ logger = logging.getLogger('chtools')
 def parse_args(arguments):
     parser = argparse.ArgumentParser(
         description="CLI to interact with CloudHealth.",
+        prog='chtools',
         add_help=False
     )
 

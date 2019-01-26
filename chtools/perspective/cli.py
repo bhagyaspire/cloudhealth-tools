@@ -86,6 +86,7 @@ class PerspectiveCliHandler(CliHandler):
     def _parse_args(self):
         parser = argparse.ArgumentParser(
             description="Create and manage perspectives",
+            prog="chtools perspective",
             add_help=False
         )
 

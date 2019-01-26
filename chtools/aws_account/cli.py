@@ -97,6 +97,7 @@ class AwsAccountCliHandler(CliHandler):
     def _parse_args(self):
         parser = argparse.ArgumentParser(
             description="Create and manage AWS Accounts",
+            prog="chtools aws-account",
             add_help=False
         )
 
