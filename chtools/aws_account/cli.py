@@ -223,10 +223,10 @@ class AwsAccountCliHandler(CliHandler):
         for account in sorted(accounts, key=lambda a: a['name'].lower()):
             account_list.append(
                 (
-                    account.get('name', ''),
-                    account.get('amazon_name', ''),
-                    account.get('owner_id', ''),
-                    account.get('account_type'),
+                    account.get('name', '')[0:24],
+                    account.get('amazon_name', '')[0:24],
+                    account.get('owner_id', '')[0:12],
+                    account.get('account_type')[0:12],
                     account['status'].get('level')
                 )
             )
