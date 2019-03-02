@@ -1,6 +1,7 @@
 import copy
 import datetime
 import logging
+import re
 
 import yaml
 from deepdiff import DeepDiff
@@ -444,8 +445,13 @@ class Perspective:
         logger.debug(
             "Updating schema with spec merge: {}".format(merge_spec)
         )
-        if type(merge_spec['from']) is not list:
-            raise ValueError(
+        if (
+                    (merge_spec.get('from')
+                        and type(merge_spec['from']) is not list)
+                or (merge_spec.get('from_regex')
+                        and type(merge_spec['from_regex']) is not list)
+        ):
+            raise TypeError(
                 "'from' in merge clause must be a list. "
                 "Invalid merge clause: {}".format(merge_spec)
             )
@@ -453,13 +459,50 @@ class Perspective:
         merge_type = merge_spec['type']
         dynamic_group = merge_spec['name']
         if merge_type == 'Group':
-            to_ref_id = self._get_ref_id_by_name(merge_spec['to'],
-                                                 dynamic_group_block=dynamic_group)
+            to_ref_id = self._get_ref_id_by_name(
+                merge_spec['to'],
+                dynamic_group_block=dynamic_group
+            )
             if to_ref_id is None:
-                raise ValueError(
+                raise RuntimeError(
                     "Unable to get ref_id for group {} "
                     "used in merge: {}".format(merge_spec['to'], merge_spec)
                 )
+
+            if merge_spec.get('from_regex'):
+                merge_spec['from'] = []
+                for constant_clause in self.schema['constants']:
+                    if constant_clause['type'] == 'Dynamic Group':
+                        dynamic_groups = constant_clause['list']
+                        break
+                else:
+                    raise RuntimeError(
+                        "No Dynamic Group constant found."
+                    )
+
+                for from_regex in merge_spec['from_regex']:
+                    pattern = re.compile(from_regex)
+                    for group in dynamic_groups:
+                        if (pattern.match(group['name'])
+                                and group['name'] != merge_spec['to']):
+                            logger.debug(
+                                "Group {} ({}) matched regex pattern {}. "
+                                "Will merge with {} ({})".format(
+                                    group['name'],
+                                    self._get_ref_id_by_name(
+                                        group['name'],
+                                        dynamic_group_block=dynamic_group
+                                    ),
+                                    from_regex,
+                                    merge_spec['to'],
+                                    self._get_ref_id_by_name(
+                                        merge_spec['to'],
+                                        dynamic_group_block=dynamic_group
+                                    )
+                                )
+                            )
+                            merge_spec['from'].append(group['name'])
+
             from_ref_ids = []
             for from_group in merge_spec['from']:
                 from_ref_id = self._get_ref_id_by_name(
@@ -469,19 +512,10 @@ class Perspective:
                 if from_ref_id:
                     from_ref_ids.append(from_ref_id)
                 else:
-                    raise ValueError(
+                    raise RuntimeError(
                         "Unable to get ref_id for group {} "
                         "used in merge: {}".format(from_group, merge_spec)
                     )
-
-                # Update Dynamic Group constant
-                # for constant in self.schema['constants']:
-                #     if constant['type'] == "Dynamic Group":
-                #         groups = constant['list']
-                #
-                # for group in groups:
-                #     if group['name'] == from_group:
-                #         group['fwd_to'] = to_ref_id
 
             # And merge clause
             merge = {
