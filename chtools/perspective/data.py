@@ -475,15 +475,15 @@ class Perspective:
                     )
 
                 # Update Dynamic Group constant
-                for constant in self.schema['constants']:
-                    if constant['type'] == "Dynamic Group":
-                        groups = constant['list']
+                # for constant in self.schema['constants']:
+                #     if constant['type'] == "Dynamic Group":
+                #         groups = constant['list']
+                #
+                # for group in groups:
+                #     if group['name'] == from_group:
+                #         group['fwd_to'] = to_ref_id
 
-                for group in groups:
-                    if group['name'] == from_group:
-                        group['fwd_to'] = to_ref_id
-
-                # And merge clause
+            # And merge clause
             merge = {
                 'type': 'Group',
                 'to': to_ref_id,
@@ -495,6 +495,48 @@ class Perspective:
                 "Unknown merge type {} used in merge: {}".format(merge_type,
                                                                  merge_spec)
             )
+
+    def _set_constant_fwd_to(self):
+        """ Merges have two parts, one part that is specified in the merges
+        clause. The other part is setting the 'fwd_to' key for each constant
+        that is merged. This function goes through the merges clause and
+        sets (or unsets) the 'fwd_to' as appropriate."""
+        merge_mapping = {}
+        for merge in self.schema['merges']:
+            for from_ref_id in merge['from']:
+                merge_mapping[from_ref_id] = merge['to']
+
+        for constant_clause in self.schema['constants']:
+            if constant_clause['type'] == 'Dynamic Group':
+                dynamic_groups = constant_clause['list']
+                break
+        else:
+            dynamic_groups = []
+
+        for group in dynamic_groups:
+            if merge_mapping.get(group['ref_id']):
+                logger.debug(
+                    'Setting group {} ({}) to forward to {} ({})'.format(
+                        self._get_name_by_ref_id(group['ref_id']),
+                        group['ref_id'],
+                        self._get_name_by_ref_id(
+                            merge_mapping[group['ref_id']]
+                        ),
+                        merge_mapping[group['ref_id']]
+                    )
+                )
+                group['fwd_to'] = merge_mapping[group['ref_id']]
+            # If not found in merge_mapping, but has 'fwd_to' this means
+            # merge has been removed and needs to be removed from the group
+            # config.
+            elif group.get('fwd_to'):
+                logger.debug(
+                    "Unsetting fwd_to on group {} ({})".format(
+                        self._get_name_by_ref_id(group['ref_id']),
+                        group['ref_id']
+                    )
+                )
+                del group['fwd_to']
 
     def _spec_rule_to_schema(self, rule):
         logger.debug(
@@ -640,6 +682,7 @@ class Perspective:
         self.schema['merges'] = []
         for merge in spec_input.get('merges', []):
             self._spec_merge_to_schema(merge)
+        self._set_constant_fwd_to()
 
     def update_cloudhealth(self):
         """Updates cloud with objects state or with provided schema"""
