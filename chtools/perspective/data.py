@@ -142,7 +142,7 @@ class Perspective:
             # created by CloudHealth prior to the merges being applied.
             if spec.get('merges'):
                 logger.debug(
-                    "Spec includes merges, creating inital "
+                    "Spec includes merges, creating initial "
                     "perspective without merges."
                 )
                 spec_without_merges = copy.deepcopy(spec)
@@ -432,7 +432,10 @@ class Perspective:
                 }
             )
 
-        spec_dict['merges'] = merges
+        if merges:
+            spec_dict['merges'] = merges
+        else:
+            del spec_dict['merges']
 
         del spec_dict['constants']
         return spec_dict

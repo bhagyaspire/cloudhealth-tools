@@ -29,7 +29,7 @@ general_test_cases = [
     ]
 
 spec_to_schema_test_cases = ['tag_filter_match_lowercase']
-schema_to_spec_test_cases = []
+schema_to_spec_test_cases = ['categorize_with_merges']
 
 
 @pytest.mark.parametrize(

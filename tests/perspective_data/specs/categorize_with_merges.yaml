@@ -1,0 +1,16 @@
+include_in_reports: 'true'
+merges:
+- from:
+  - Live
+  - live
+  name: Environments
+  to: Production
+  type: Group
+name: Environments
+rules:
+- asset: AwsAsset
+  name: Environments
+  tag_field: Environment
+  to: Environments
+  type: categorize
+
