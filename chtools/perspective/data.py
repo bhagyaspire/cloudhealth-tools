@@ -99,6 +99,20 @@ class Perspective:
         logger.debug("Adding Merge: {}".format(merge_definition))
         self._schema['merges'].append(merge_definition)
 
+    def _create_perspective(self):
+        # If self.id is set that means we know the perspective already exists
+        if not self.id:
+            schema_data = {'schema': self._schema}
+            response = self._http_client.post(self._uri, schema_data)
+            perspective_id = response['message'].split(" ")[1]
+            self.id = perspective_id
+            self.get_schema()
+        else:
+            raise RuntimeError(
+                "Perspective with Id {} exists. Use update_cloudhealth "
+                "instead".format(self.id)
+            )
+
     def create(self, perspective_name, schema=None, spec=None):
         """Creates an empty perspective or one based on a provided schema"""
         logger.info("Creating perspective {}".format(perspective_name))
@@ -120,24 +134,35 @@ class Perspective:
 
         if schema:
             self._schema = schema
+            self._create_perspective()
         elif spec:
-            self.spec = spec
+            # If perspective includes merges we will create the perspective
+            # without the merges and then update it with the merges. This is
+            # needed as the Dynamic Groups (and related ref_ids) needs to be
+            # created by CloudHealth prior to the merges being applied.
+            if spec.get('merges'):
+                logger.debug(
+                    "Spec includes merges, creating inital "
+                    "perspective without merges."
+                )
+                spec_without_merges = copy.deepcopy(spec)
+                del spec_without_merges['merges']
+                self.spec = spec_without_merges
+                self._create_perspective()
+                logger.debug(
+                    "Updating perspective with merges from Spec"
+                )
+                self.spec = spec
+                self.update_cloudhealth()
+            else:
+                self.spec = spec
+                self._create_perspective()
         else:
             # Just set name for existing empty schema
             self.name = perspective_name
+            self._create_perspective()
 
-        # If self.id is set that means we know the perspective already exists
-        if not self.id:
-            schema_data = {'schema': self._schema}
-            response = self._http_client.post(self._uri, schema_data)
-            perspective_id = response['message'].split(" ")[1]
-            self.id = perspective_id
-            self.get_schema()
-        else:
-            raise RuntimeError(
-                "Perspective with Id {} exists. Use update_cloudhealth "
-                "instead".format(self.id)
-            )
+
 
     def delete(self):
         # Perspective Names are not reusable for a tenant even if they are
