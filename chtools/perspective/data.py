@@ -95,6 +95,10 @@ class Perspective:
         logger.debug("Adding Rule: {}".format(rule_definition))
         self._schema['rules'].append(rule_definition)
 
+    def _add_merge(self, merge_definition):
+        logger.debug("Adding Merge: {}".format(merge_definition))
+        self._schema['merges'].append(merge_definition)
+
     def create(self, perspective_name, schema=None, spec=None):
         """Creates an empty perspective or one based on a provided schema"""
         logger.info("Creating perspective {}".format(perspective_name))
@@ -184,20 +188,52 @@ class Perspective:
         # found.
         return None
 
-    def _get_ref_id_by_name(self, constant_name):
+    def _get_ref_id_by_name(self, constant_name, dynamic_group_block=None):
         """Returns the ref_id of a constant (i.e. group) with a specified name
+
+        By default only Static Groups and Dynamic Group Blocks are searched.
+        Dynamic Groups are searched if the name of the Dynamic Group Block
+        is specified.
 
         None is returned if constant with ref_id doesn't exist. This is used
         to identify new groups that need to have a new ref_id generated for
         them.
         """
-        constant_types = ['Static Group', 'Dynamic Group Block']
-        constants = [constant for constant in self.schema['constants']
-                     if constant['type'] in constant_types]
-        for constant in constants:
-            for item in constant['list']:
-                if item['name'] == constant_name and not item.get('is_other'):
-                    return item['ref_id']
+        if not dynamic_group_block:
+            constants_list = []
+            for constant in self.schema['constants']:
+                if constant['type'] in ["Static Group", "Dynamic Group Block"]:
+                    constants_list.extend(constant['list'])
+        else:
+            for constant in self.schema['constants']:
+                if constant['type'] == "Dynamic Group Block":
+                    dynamic_group_blocks = constant['list']
+                elif constant['type'] == "Dynamic Group":
+                    dynamic_groups = constant['list']
+
+            blk_id = None
+            for block in dynamic_group_blocks:
+                if block['name'] == dynamic_group_block:
+                    blk_id = block['ref_id']
+                    break
+
+            if not blk_id:
+                raise ValueError(
+                    "Unable to find Dynamic Group with name {}".format(
+                        dynamic_group_block
+                    )
+                )
+
+            constants_list = [
+                constant for constant in dynamic_groups
+                if constant['blk_id'] == blk_id
+            ]
+
+        for constant in constants_list:
+                if (constant['name'] == constant_name
+                        and not constant.get('is_other')):
+                    return constant['ref_id']
+
         # If we get here then no constant with the specified name has been
         # found.
         return None
@@ -350,6 +386,62 @@ class Perspective:
         del spec_dict['constants']
         return spec_dict
 
+    def _spec_merge_to_schema(self, merge_spec):
+        logger.debug(
+            "Updating schema with spec merge: {}".format(merge_spec)
+        )
+        if type(merge_spec['from']) is not list:
+            raise ValueError(
+                "'from' in merge clause must be a list. "
+                "Invalid merge clause: {}".format(merge_spec)
+            )
+
+        merge_type = merge_spec['type']
+        dynamic_group = merge_spec['name']
+        if merge_type == 'Group':
+            to_ref_id = self._get_ref_id_by_name(merge_spec['to'],
+                                                 dynamic_group_block=dynamic_group)
+            if to_ref_id is None:
+                raise ValueError(
+                    "Unable to get ref_id for group {} "
+                    "used in merge: {}".format(merge_spec['to'], merge_spec)
+                )
+            from_ref_ids = []
+            for from_group in merge_spec['from']:
+                from_ref_id = self._get_ref_id_by_name(
+                    from_group,
+                    dynamic_group_block=dynamic_group
+                )
+                if from_ref_id:
+                    from_ref_ids.append(from_ref_id)
+                else:
+                    raise ValueError(
+                        "Unable to get ref_id for group {} "
+                        "used in merge: {}".format(from_group, merge_spec)
+                    )
+
+                # Update Dynamic Group constant
+                for constant in self.schema['constants']:
+                    if constant['type'] == "Dynamic Group":
+                        groups = constant['list']
+
+                for group in groups:
+                    if group['name'] == from_group:
+                        group['fwd_to'] = to_ref_id
+
+                # And merge clause
+            merge = {
+                'type': 'Group',
+                'to': to_ref_id,
+                'from': from_ref_ids
+            }
+            self._add_merge(merge)
+        else:
+            raise ValueError(
+                "Unknown merge type {} used in merge: {}".format(merge_type,
+                                                                 merge_spec)
+            )
+
     def _spec_rule_to_schema(self, rule):
         logger.debug(
             "Updating schema with spec rule: {}".format(rule)
@@ -426,7 +518,8 @@ class Perspective:
 
         self._add_rule(rule)
 
-    def _match_lowercase_clauses(self, clauses, field):
+    @staticmethod
+    def _match_lowercase_clauses(clauses, field):
         """Takes a list of clauses and returns a new list to include matching
         of lower case values.
 
@@ -489,25 +582,18 @@ class Perspective:
             else:
                 self._spec_rule_to_schema(rule)
 
+        # Remove all existing merges, they will be "over written" by the spec
+        self.schema['merges'] = []
+        for merge in spec_input.get('merges', []):
+            self._spec_merge_to_schema(merge)
+
     def update_cloudhealth(self):
         """Updates cloud with objects state or with provided schema"""
         if self.id:
-            # Dynamic Group constants are created and maintained by
-            # CloudHealth. They should be stripped from the schema prior to
-            # submitting them to the API.
-
-            # create copy of schema dict with and then change copy
-            schema_data = {'schema': dict(self.schema)}
-            schema_data['schema']['constants'] = [
-                constant for constant in schema_data['schema']['constants']
-                if constant['type'] != 'Dynamic Group'
-            ]
-
-            update_params = {'allow_group_delete': True}
+            schema_data = {'schema': self.schema}
 
             response = self._http_client.put(self._uri,
-                                             schema_data,
-                                             params=update_params)
+                                             schema_data)
             self.get_schema()
         else:
             raise RuntimeError(
