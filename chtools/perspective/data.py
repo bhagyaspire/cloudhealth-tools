@@ -75,7 +75,7 @@ class Perspective:
                 }
                 self.schema['constants'].append(constant)
 
-            ref_id = self._get_new_ref_id
+            ref_id = self._get_new_ref_id()
             logger.debug(
                 "creating constant {} {} with ref_id {}".format(
                     constant_name,
@@ -162,8 +162,6 @@ class Perspective:
             self.name = perspective_name
             self._create_perspective()
 
-
-
     def delete(self):
         # Perspective Names are not reusable for a tenant even if they are
         # hard deleted. Rename perspective prior to delete to allow the name
@@ -179,7 +177,6 @@ class Perspective:
         logger.debug(response)
         self._schema = None
 
-    @property
     def _get_new_ref_id(self):
         """Generates new ref_ids that are not in the current schema"""
         while True:
@@ -199,19 +196,29 @@ class Perspective:
 
         return str(self._new_ref_id)
 
-    def _get_name_by_ref_id(self, ref_id):
-        """Returns the name of a constant (i.e. group) with a specified ref_id
-        """
-        constant_types = ['Static Group', 'Dynamic Group Block']
+    def _get_constant_by_ref_id(self, ref_id):
+        """Returns the constant clause (i.e. group) for a specified ref_id"""
+        constant_types = ['Static Group',
+                          'Dynamic Group Block',
+                          'Dynamic Group']
         constants = [constant for constant in self.schema['constants']
                      if constant['type'] in constant_types]
         for constant in constants:
             for item in constant['list']:
                 if item['ref_id'] == ref_id and not item.get('is_other'):
-                    return item['name']
+                    return item
         # If we get here then no constant with the specified name has been
         # found.
         return None
+
+    def _get_name_by_ref_id(self, ref_id):
+        """Returns the name of a constant (i.e. group) with a specified ref_id
+        """
+        constant = self._get_constant_by_ref_id(ref_id)
+        if constant:
+            return constant['name']
+        else:
+            return None
 
     def _get_ref_id_by_name(self, constant_name, dynamic_group_block=None):
         """Returns the ref_id of a constant (i.e. group) with a specified name
@@ -407,7 +414,26 @@ class Perspective:
                 combined_rules.append(current_rule)
 
         spec_dict['rules'] = combined_rules
-        del spec_dict['merges']
+
+        merges = []
+        for merge_clause in spec_dict['merges']:
+            to_group = self._get_constant_by_ref_id(merge_clause['to'])
+            from_groups = [
+                self._get_name_by_ref_id(ref_id) for ref_id
+                in merge_clause['from']
+            ]
+
+            merges.append(
+                {
+                    'name': self._get_name_by_ref_id(to_group['blk_id']),
+                    'type': merge_clause['type'],
+                    'to': to_group['name'],
+                    'from': from_groups
+                }
+            )
+
+        spec_dict['merges'] = merges
+
         del spec_dict['constants']
         return spec_dict
 
