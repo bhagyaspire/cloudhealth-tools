@@ -1,0 +1,293 @@
+{
+    "name": "Environments",
+    "include_in_reports": "true",
+    "rules": [
+        {
+            "type": "categorize",
+            "asset": "AwsAsset",
+            "tag_field": [
+                "Environment"
+            ],
+            "ref_id": "2954937505876",
+            "name": "Environments"
+        }
+    ],
+    "merges": [
+        {
+            "type": "Group",
+            "to": "2954937647808",
+            "from": [
+                "2954937647805",
+                "2954937647811"
+            ]
+        }
+    ],
+    "constants": [
+        {
+            "type": "Dynamic Group Block",
+            "list": [
+                {
+                    "ref_id": "2954937505876",
+                    "name": "Environments"
+                }
+            ]
+        },
+        {
+            "type": "Dynamic Group",
+            "list": [
+                {
+                    "ref_id": "2954937647804",
+                    "blk_id": "2954937505876",
+                    "val": "Development",
+                    "name": "Development"
+                },
+                {
+                    "ref_id": "2954937647805",
+                    "blk_id": "2954937505876",
+                    "val": "Live",
+                    "name": "Live",
+                    "fwd_to": "2954937647808"
+                },
+                {
+                    "ref_id": "2954937647806",
+                    "blk_id": "2954937505876",
+                    "val": "staging",
+                    "name": "staging"
+                },
+                {
+                    "ref_id": "2954937647807",
+                    "blk_id": "2954937505876",
+                    "val": "Sandbox",
+                    "name": "Sandbox"
+                },
+                {
+                    "ref_id": "2954937647808",
+                    "blk_id": "2954937505876",
+                    "val": "Production",
+                    "name": "Production"
+                },
+                {
+                    "ref_id": "2954937647809",
+                    "blk_id": "2954937505876",
+                    "val": "Integration Testing",
+                    "name": "Integration Testing"
+                },
+                {
+                    "ref_id": "2954937647810",
+                    "blk_id": "2954937505876",
+                    "val": "Other",
+                    "name": "Other"
+                },
+                {
+                    "ref_id": "2954937647811",
+                    "blk_id": "2954937505876",
+                    "val": "live",
+                    "name": "live",
+                    "fwd_to": "2954937647808"
+                },
+                {
+                    "ref_id": "2954937647812",
+                    "blk_id": "2954937505876",
+                    "val": "Staging",
+                    "name": "Staging"
+                },
+                {
+                    "ref_id": "2954937647813",
+                    "blk_id": "2954937505876",
+                    "val": "Dev",
+                    "name": "Dev"
+                },
+                {
+                    "ref_id": "2954937647814",
+                    "blk_id": "2954937505876",
+                    "val": "development",
+                    "name": "development"
+                },
+                {
+                    "ref_id": "2954937647815",
+                    "blk_id": "2954937505876",
+                    "val": "Research",
+                    "name": "Research"
+                },
+                {
+                    "ref_id": "2954937647816",
+                    "blk_id": "2954937505876",
+                    "val": "Discovery",
+                    "name": "Discovery"
+                },
+                {
+                    "ref_id": "2954937647817",
+                    "blk_id": "2954937505876",
+                    "val": "tech",
+                    "name": "tech"
+                },
+                {
+                    "ref_id": "2954937647818",
+                    "blk_id": "2954937505876",
+                    "val": "ci",
+                    "name": "ci"
+                },
+                {
+                    "ref_id": "2954937647819",
+                    "blk_id": "2954937505876",
+                    "val": "QA",
+                    "name": "QA"
+                },
+                {
+                    "ref_id": "2954937647820",
+                    "blk_id": "2954937505876",
+                    "val": "production",
+                    "name": "production"
+                },
+                {
+                    "ref_id": "2954937647821",
+                    "blk_id": "2954937505876",
+                    "val": "Integration",
+                    "name": "Integration"
+                },
+                {
+                    "ref_id": "2954937647822",
+                    "blk_id": "2954937505876",
+                    "val": "integration",
+                    "name": "integration"
+                },
+                {
+                    "ref_id": "2954937647823",
+                    "blk_id": "2954937505876",
+                    "val": "Tech",
+                    "name": "Tech"
+                },
+                {
+                    "ref_id": "2954937647824",
+                    "blk_id": "2954937505876",
+                    "val": "sandbox",
+                    "name": "sandbox"
+                },
+                {
+                    "ref_id": "2954937647825",
+                    "blk_id": "2954937505876",
+                    "val": "QC",
+                    "name": "QC"
+                },
+                {
+                    "ref_id": "2954937647826",
+                    "blk_id": "2954937505876",
+                    "val": "dev",
+                    "name": "dev"
+                },
+                {
+                    "ref_id": "2954937647827",
+                    "blk_id": "2954937505876",
+                    "val": "loadtest",
+                    "name": "loadtest"
+                },
+                {
+                    "ref_id": "2954937647828",
+                    "blk_id": "2954937505876",
+                    "val": "qa",
+                    "name": "qa"
+                },
+                {
+                    "ref_id": "2954937647829",
+                    "blk_id": "2954937505876",
+                    "val": "Image-Production",
+                    "name": "Image-Production"
+                },
+                {
+                    "ref_id": "2954937647830",
+                    "blk_id": "2954937505876",
+                    "val": "Load Testing",
+                    "name": "Load Testing"
+                },
+                {
+                    "ref_id": "2954937647831",
+                    "blk_id": "2954937505876",
+                    "val": "cg-admin-platform-126",
+                    "name": "cg-admin-platform-126"
+                },
+                {
+                    "ref_id": "2954937647832",
+                    "blk_id": "2954937505876",
+                    "val": "test",
+                    "name": "test"
+                },
+                {
+                    "ref_id": "2954937647833",
+                    "blk_id": "2954937505876",
+                    "val": "Image-Development",
+                    "name": "Image-Development"
+                },
+                {
+                    "ref_id": "2954937647834",
+                    "blk_id": "2954937505876",
+                    "val": "System",
+                    "name": "System"
+                },
+                {
+                    "ref_id": "2954937647835",
+                    "blk_id": "2954937505876",
+                    "val": "demo",
+                    "name": "demo"
+                },
+                {
+                    "ref_id": "2954937647836",
+                    "blk_id": "2954937505876",
+                    "val": "local",
+                    "name": "local"
+                },
+                {
+                    "ref_id": "2954937647837",
+                    "blk_id": "2954937505876",
+                    "val": "Dataeng-Dev",
+                    "name": "Dataeng-Dev"
+                },
+                {
+                    "ref_id": "2954937647838",
+                    "blk_id": "2954937505876",
+                    "val": "Dataeng-Prod",
+                    "name": "Dataeng-Prod"
+                },
+                {
+                    "ref_id": "2954937647839",
+                    "blk_id": "2954937505876",
+                    "val": "a",
+                    "name": "a"
+                },
+                {
+                    "ref_id": "2954937647840",
+                    "blk_id": "2954937505876",
+                    "val": "it",
+                    "name": "it"
+                },
+                {
+                    "ref_id": "2954937647841",
+                    "blk_id": "2954937505876",
+                    "val": "BI",
+                    "name": "BI"
+                },
+                {
+                    "ref_id": "2954937647842",
+                    "blk_id": "2954937505876",
+                    "val": "other",
+                    "name": "other"
+                },
+                {
+                    "ref_id": "2954937647843",
+                    "blk_id": "2954937505876",
+                    "val": "live-qc",
+                    "name": "live-qc"
+                }
+            ]
+        },
+        {
+            "type": "Static Group",
+            "list": [
+                {
+                    "ref_id": "2954937647803",
+                    "name": "Other",
+                    "is_other": "true"
+                }
+            ]
+        }
+    ]
+}
