@@ -1,0 +1,23 @@
+include_in_reports: 'true'
+name: EnvironmentTest
+rules:
+- asset: AwsAsset
+  name: Environment
+  tag_field: Environment
+  to: Environment
+  type: categorize
+merges:
+- name: Environment
+  type: Group
+  to: Production
+  from_regex:
+    - "^[Ll]ive"
+    - ".*[Pp]rod.*"
+    - "^[Tt]ech$"
+- name: Environment
+  type: Group
+  to: Development
+  from_regex:
+    - ".*[Dd]ev.*"
+    - "^[Ss]andbox"
+    - "^Discovery$"
