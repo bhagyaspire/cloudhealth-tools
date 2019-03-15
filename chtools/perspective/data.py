@@ -169,6 +169,9 @@ class Perspective:
         # to be reused
         timestamp = datetime.datetime.now()
         self.name = self.name + str(timestamp)
+        logger.debug(
+            "Renaming perspective to {}".format(self.name)
+        )
         self.update_cloudhealth()
         # hard_delete can cause CloudHealth to return 500 errors if
         # perspective schema gets into a strange state delete_params = {
