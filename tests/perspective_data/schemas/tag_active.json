@@ -1,1 +1,47 @@
-{"name": "tag_active", "merges": [], "constants": [{"list": [{"name": "Other", "ref_id": "1234567890", "is_other": "true"}, {"ref_id": "101", "name": "tag_active"}], "type": "Static Group"}], "include_in_reports": "true", "rules": [{"type": "filter", "asset": "AwsTaggableAsset", "to": "101", "condition": {"combine_with": "AND", "clauses": [{"field": ["Active"], "op": "=", "val": "true"}, {"tag_field": ["Owner"], "op": "=", "val": "Colin"}]}}]}
+{
+  "name": "tag_active",
+  "merges": [],
+  "constants": [
+    {
+      "list": [
+        {
+          "name": "Other",
+          "ref_id": "1234567890",
+          "is_other": "true"
+        },
+        {
+          "ref_id": "101",
+          "name": "tag_active"
+        }
+      ],
+      "type": "Static Group"
+    }
+  ],
+  "include_in_reports": "true",
+  "rules": [
+    {
+      "type": "filter",
+      "asset": "AwsTaggableAsset",
+      "to": "101",
+      "condition": {
+        "combine_with": "AND",
+        "clauses": [
+          {
+            "field": [
+              "Active"
+            ],
+            "op": "=",
+            "val": "true"
+          },
+          {
+            "tag_field": [
+              "Owner"
+            ],
+            "op": "=",
+            "val": "Colin"
+          }
+        ]
+      }
+    }
+  ]
+}
