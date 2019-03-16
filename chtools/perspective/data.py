@@ -307,6 +307,35 @@ class Perspective:
     def get_schema(self):
         """gets the latest schema from CloudHealth"""
         response = self._http_client.get(self._uri)
+        schema = response['schema']
+
+        # If the perspective has Dynamic Groups then sometimes crud and other
+        #  invalid groups can be returned with the schema. An example of
+        # this is a Dynamic Group that no longer exists. It seems
+        # CloudHealth includes these when getting the schema, but will not
+        # allow them to be submitted back when updating the schema. So we
+        # need to filter them out.
+        for constant in schema['constants']:
+            if constant['type'] == 'Dynamic Group':
+                dynamic_group_block = constant
+                break
+        else:
+            dynamic_group_block = None
+
+        if dynamic_group_block:
+            valid_dynamic_groups = []
+            for group in dynamic_group_block['list']:
+                if group['blk_id'] != "":
+                    valid_dynamic_groups.append(group)
+                else:
+                    logger.debug(
+                        "Dynamic Group {} does not appear to be valid as in "
+                        "being excluded form the Perspective object's "
+                        "schema. ".format(group)
+                    )
+
+            dynamic_group_block['list'] = valid_dynamic_groups
+
         self._schema = response['schema']
 
     @property
@@ -545,9 +574,16 @@ class Perspective:
                 if from_ref_id:
                     from_ref_ids.append(from_ref_id)
                 else:
-                    raise RuntimeError(
-                        "Unable to get ref_id for group {} "
-                        "used in merge: {}".format(from_group, merge_spec)
+                    logger.warning(
+                        "Unable to get ref_id for group '{}' "
+                        "used in merge: {}. Perspectives sometimes get into "
+                        "a strange state with groups that are no longer valid."
+                        " Recreating the perspective is the only way resolve "
+                        "this kind of issue as manging Dynamic Groups and "
+                        "removing merges is not support by the CloudHealth "
+                        "API. If the group doesn't appear to be a valid "
+                        "group then this warning can be ignored.".format(
+                            from_group, merge_spec)
                     )
 
             # And merge clause
