@@ -169,6 +169,9 @@ class Perspective:
         # to be reused
         timestamp = datetime.datetime.now()
         self.name = self.name + str(timestamp)
+        logger.debug(
+            "Renaming perspective to {}".format(self.name)
+        )
         self.update_cloudhealth()
         # hard_delete can cause CloudHealth to return 500 errors if
         # perspective schema gets into a strange state delete_params = {
@@ -197,6 +200,36 @@ class Perspective:
 
         return str(self._new_ref_id)
 
+    def _get_constant_by_name(self, constant_name, constant_type):
+        """Returns the constant clause (i.e. group) for a specified name"""
+        constant_types = ['Static Group',
+                          'Dynamic Group Block',
+                          'Dynamic Group']
+        if constant_type not in constant_types:
+            raise RuntimeError(
+                "constant_type {} is not a valid.".format(constant_type)
+            )
+
+        constants = [constant for constant in self.schema['constants']
+                     if constant['type'] == constant_type]
+        for constant in constants:
+            for item in constant['list']:
+                if item['name'] == constant_name and not item.get('is_other'):
+                    logger.debug(
+                        "Found {} constant {} and returning: {}".format(
+                            constant_type, constant_name, item
+                        )
+                    )
+                    return item
+        # If we get here then no constant with the specified name has been
+        # found.
+        logger.debug(
+            "Unable to find {} constant {} and returning None".format(
+                            constant_type, constant_name
+                        )
+        )
+        return None
+
     def _get_constant_by_ref_id(self, ref_id):
         """Returns the constant clause (i.e. group) for a specified ref_id"""
         constant_types = ['Static Group',
@@ -208,7 +241,7 @@ class Perspective:
             for item in constant['list']:
                 if item['ref_id'] == ref_id and not item.get('is_other'):
                     return item
-        # If we get here then no constant with the specified name has been
+        # If we get here then no constant with the specified ref_id has been
         # found.
         return None
 
@@ -251,7 +284,7 @@ class Perspective:
                     break
 
             if not blk_id:
-                raise ValueError(
+                raise RuntimeError(
                     "Unable to find Dynamic Group with name {}".format(
                         dynamic_group_block
                     )
@@ -274,6 +307,35 @@ class Perspective:
     def get_schema(self):
         """gets the latest schema from CloudHealth"""
         response = self._http_client.get(self._uri)
+        schema = response['schema']
+
+        # If the perspective has Dynamic Groups then sometimes crud and other
+        #  invalid groups can be returned with the schema. An example of
+        # this is a Dynamic Group that no longer exists. It seems
+        # CloudHealth includes these when getting the schema, but will not
+        # allow them to be submitted back when updating the schema. So we
+        # need to filter them out.
+        for constant in schema['constants']:
+            if constant['type'] == 'Dynamic Group':
+                dynamic_group_block = constant
+                break
+        else:
+            dynamic_group_block = None
+
+        if dynamic_group_block:
+            valid_dynamic_groups = []
+            for group in dynamic_group_block['list']:
+                if group['blk_id'] != "":
+                    valid_dynamic_groups.append(group)
+                else:
+                    logger.debug(
+                        "Dynamic Group {} does not appear to be valid as in "
+                        "being excluded form the Perspective object's "
+                        "schema. ".format(group)
+                    )
+
+            dynamic_group_block['list'] = valid_dynamic_groups
+
         self._schema = response['schema']
 
     @property
@@ -512,9 +574,16 @@ class Perspective:
                 if from_ref_id:
                     from_ref_ids.append(from_ref_id)
                 else:
-                    raise RuntimeError(
-                        "Unable to get ref_id for group {} "
-                        "used in merge: {}".format(from_group, merge_spec)
+                    logger.warning(
+                        "Unable to get ref_id for group '{}' "
+                        "used in merge: {}. Perspectives sometimes get into "
+                        "a strange state with groups that are no longer valid."
+                        " Recreating the perspective is the only way resolve "
+                        "this kind of issue as manging Dynamic Groups and "
+                        "removing merges is not support by the CloudHealth "
+                        "API. If the group doesn't appear to be a valid "
+                        "group then this warning can be ignored.".format(
+                            from_group, merge_spec)
                     )
 
             # And merge clause
@@ -525,7 +594,7 @@ class Perspective:
             }
             self._add_merge(merge)
         else:
-            raise ValueError(
+            raise RuntimeError(
                 "Unknown merge type {} used in merge: {}".format(merge_type,
                                                                  merge_spec)
             )
@@ -715,6 +784,24 @@ class Perspective:
         # Remove all existing merges, they will be "over written" by the spec
         self.schema['merges'] = []
         for merge in spec_input.get('merges', []):
+            # Dynamic Group Block must be created by CloudHealth before merges
+            # can be defined.
+            dynamic_block_name = merge['name']
+            dynamic_block_constant = self._get_constant_by_name(
+                dynamic_block_name,
+                'Dynamic Group Block'
+            )
+            # ref_id generated by CloudHealth are 13 characters. If the
+            # ref_id is less than that then we know it's something has been
+            # added to the spec and has not been created in CloudHealth yet.
+            if (not dynamic_block_constant
+                    or len(dynamic_block_constant['ref_id']) < 13):
+                raise RuntimeError(
+                    "categorize rule for {} must be applied to the "
+                    "perspective before merges can be defined. Resubmit this "
+                    "spec once the spec without the merges has been "
+                    "applied. ".format(dynamic_block_name)
+                )
             self._spec_merge_to_schema(merge)
         self._set_constant_fwd_to()
 
