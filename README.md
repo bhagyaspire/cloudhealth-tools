@@ -26,7 +26,7 @@ As a provider you can specify a `--client-api-id` argument to perform actions ag
 A `chtools` CLI utility is the main way the CloudHealth tools are intended to be used. The `chtools` has several "subcommands" to indicated what feature of CloudHealth you would like to interact with. Each feature has several "subcommands" to indication what action you wish to take. In general it's:
 
 ```
-$ chtools featrue command --arg-name arg-value
+$ chtools feature command --arg-name arg-value
 ```
 
 Specific examples looks like this
