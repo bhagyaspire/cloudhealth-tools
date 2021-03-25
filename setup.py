@@ -19,7 +19,7 @@ setup(name='chtools',
             'certifi==2018.1.18',
             'chardet==3.0.4',
             'idna==2.6',
-            'PyYAML==4.2b1',
+            'PyYAML==5.4',
             'requests==2.20.0',
             'urllib3==1.23'
       ],
