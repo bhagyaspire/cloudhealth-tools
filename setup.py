@@ -21,7 +21,7 @@ setup(name='chtools',
             'idna==2.6',
             'PyYAML==4.2b1',
             'requests==2.20.0',
-            'urllib3==1.23'
+            'urllib3==1.26.5'
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
